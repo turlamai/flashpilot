@@ -11,8 +11,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: acceptance-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve main Product Acceptance; cancel only superseded PR revisions.
+  group: acceptance-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   RIVET_PIN: 9d766b4acab672844093204cb4845ef4ef933d2c
