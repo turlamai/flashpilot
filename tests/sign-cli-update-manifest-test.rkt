@@ -6,6 +6,7 @@
 (require crypto
          (only-in crypto/libcrypto libcrypto-factory)
          rackunit
+         racket/list
          racket/file
          racket/path
          rivet/distribution
@@ -37,6 +38,10 @@
 (dynamic-wind
   void
   (lambda ()
+    (define verified #f)
+    (define known-good #f)
+    (define absent #f)
+    (define arguments #f)
     (make-directory dist)
     (write-key private-file secret 'PrivateKeyInfo)
     (write-key public-file secret 'SubjectPublicKeyInfo)
@@ -48,7 +53,7 @@
       (call-with-output-file (build-path dist name)
         (lambda (out) (write-bytes (make-bytes (+ 128 index) index) out))))
     (check-equal? (sign!) output)
-    (define verified
+    (set! verified
       (call-with-input-file output
         (lambda (in)
           (verify-signed-manifest in
@@ -74,7 +79,7 @@
       (check-equal? (update-artifact-sha256 artifact)
                     (sha256-file/hex file))
       (check-equal? (update-artifact-size artifact) (file-size file)))
-    (define known-good (file->bytes output))
+    (set! known-good (file->bytes output))
 
     ;; Fail-closed publisher: a wrong trust root must not replace an
     ;; already verified manifest, even if the signing key itself is valid.
@@ -86,7 +91,7 @@
     (check-equal? (file->bytes output) known-good)
 
     ;; A missing architecture invalidates the whole five-asset release.
-    (define absent
+    (set! absent
       (build-path dist "flashpilot-0.2.0-macos-arm64.zip"))
     (delete-file absent)
     (check-exn #rx"required CLI release archive"
@@ -95,7 +100,7 @@
 
     (check-exn #rx"missing required option"
                (lambda () (parse-sign-cli-update-arguments '())))
-    (define arguments
+    (set! arguments
       (parse-sign-cli-update-arguments
        (list "--version" version "--build" "2" "--dir" "dist"
              "--private-key" "private.der" "--public-key" "public.der"
