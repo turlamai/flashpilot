@@ -47,7 +47,7 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
       <a href="#design" data-i18n="nav.design">设计原则</a>
       <a href="#start" data-i18n="nav.start">三步开始</a>
       <a href="#download" data-i18n="nav.download">下载</a>
-      <a href="guide.html" data-i18n="nav.guide">手册</a>
+      <a href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md" data-guide-zh="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md" data-guide-en="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.md" data-i18n="nav.guide">手册</a>
       <a href="https://github.com/turlamai/flashpilot" data-i18n="nav.github">GitHub</a>
       <div class="lang-dropdown-wrapper">
         <button class="lang-btn" type="button" aria-label="Switch language">
@@ -297,6 +297,8 @@ raco pkg install --auto --name flashpilot --link racket</div>
   function setLang(lang) {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     var dict = I18N[lang];
+    var manualLink = document.querySelector('[data-guide-zh][data-guide-en]');
+    if (manualLink) manualLink.href = manualLink.getAttribute(lang === 'zh' ? 'data-guide-zh' : 'data-guide-en');
     document.querySelectorAll('[data-i18n]').forEach(function (el) {
       var key = el.getAttribute('data-i18n');
       if (dict[key]) el.textContent = dict[key];
