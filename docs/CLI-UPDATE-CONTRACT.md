@@ -30,15 +30,42 @@ query/fragment substitution, app-component substitution, unsupported platform,
 downgrades and oversized metadata or payloads. CI runs these tests on all
 three operating systems without accessing any production release credentials.
 
+## Offline five-platform signing preparation
+
+`scripts/sign-cli-update-manifest.rkt` prepares the exact signed vNext
+manifest from these five versioned ZIPs: Windows x64; Linux x64 and arm64;
+macOS x64 and arm64. Its required inputs are the version, build number,
+physical archive directory, protected Ed25519 private key file, separately
+pinned **client-trusted** public key file, and key identifier.
+
+```sh
+racket scripts/sign-cli-update-manifest.rkt \
+  --version 0.2.0 --build 2 --dir dist \
+  --private-key /secure/update-private.der \
+  --public-key /secure/client-trust-root.der \
+  --key-id flashpilot-release-2026
+```
+
+The script requires all five files, signs their exact SHA-256 and sizes with
+the official immutable version-tag URLs, then verifies the written Ed25519
+wrapper using the client public key *before atomically publishing* the
+manifest. A signer mismatch or missing archive leaves an existing
+manifest untouched. CI uses synthetic keys and disposable archives to test
+this behavior on every platform. **The current release workflow does not
+yet invoke the signer**: adding it without the production private key and
+client trust anchor would either prevent manual releases or create a feed
+no installed v0.1.0 client can trust.
+
 ## Remaining release and CLI integration work
 
 1. Provision a dedicated Ed25519 update signing key in the protected
    release system and **embed only the authenticated public trust root**
    and key ID in built CLI distributions. Do not add private signing
    material to this repository.
-2. Extend the release job to sign the *exact five* versioned ZIP archives,
-   publish the signed manifest and fail closed on a missing/mismatched
-   signing key. Verify manifest/file parity before uploading the Release.
+2. Integrate the existing offline five-archive signer into a protected
+   release job after the clients embed the official public trust anchor.
+   Fail closed on missing or mismatched signer and verify archive parity
+   before uploading the Release.
 3. Add an explicit `flashpilot update check` command (with stable JSON,
    documented exit codes), and `flashpilot update download` using Rivet's
    timeout-bounded, signed-size, SHA-256-verified downloader. No implicit
