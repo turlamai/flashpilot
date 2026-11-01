@@ -4,12 +4,12 @@
 ;; tests. No GitHub access, ECU, installed binary, or release secret is needed.
 
 (require crypto
-         crypto/all
+         (only-in crypto/libcrypto libcrypto-factory)
          rackunit
          rivet/distribution
          "../app/update-policy.rkt")
 
-(use-all-factories!)
+(crypto-factories (list libcrypto-factory))
 (define signer (generate-private-key 'eddsa '((curve ed25519))))
 (define wrong-signer (generate-private-key 'eddsa '((curve ed25519))))
 (define pub (datum->pk-key (pk-key->datum signer 'rkt-public) 'rkt-public))
