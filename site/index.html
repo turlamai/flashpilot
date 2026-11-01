@@ -48,7 +48,7 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
       <a href="#start" data-i18n="nav.start">三步开始</a>
       <a href="#download" data-i18n="nav.download">下载</a>
       <a href="guide.html" data-i18n="nav.guide">手册</a>
-      <a href="https://github.com/turinglambdaai/flashpilot" data-i18n="nav.github">GitHub</a>
+      <a href="https://github.com/turlamai/flashpilot" data-i18n="nav.github">GitHub</a>
       <div class="lang-dropdown-wrapper">
         <button class="lang-btn" type="button" aria-label="Switch language">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
@@ -77,7 +77,7 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
     </p>
     <div class="cta">
       <a class="btn btn-primary" href="#download" data-i18n="hero.get">获取 FlashPilot</a>
-      <a class="btn btn-secondary" href="https://github.com/turinglambdaai/flashpilot" data-i18n="hero.source">查看源码</a>
+      <a class="btn btn-secondary" href="https://github.com/turlamai/flashpilot" data-i18n="hero.source">查看源码</a>
     </div>
   </section>
 
@@ -132,7 +132,7 @@ html:lang(en) .reader-zh,html:lang(zh) .reader-en{display:none!important}@media(
         <div>
           <h3 data-i18n="s1-title">装上引擎</h3>
           <p data-i18n="s1-body">Racket 包一行装好，引擎与 CLI 即在本地可用。</p>
-          <div class="code">git clone https://github.com/turinglambdaai/flashpilot.git
+          <div class="code">git clone https://github.com/turlamai/flashpilot.git
 cd flashpilot
 raco pkg install --auto --name flashpilot --link racket</div>
         </div>
@@ -159,12 +159,12 @@ raco pkg install --auto --name flashpilot --link racket</div>
   <section id="download" class="section alt">
     <h2 data-i18n="download-title">下载</h2>
     <div class="dl-grid">
-      <a class="dl-card" href="https://github.com/turinglambdaai/flashpilot/releases/latest">
+      <a class="dl-card" href="https://github.com/turlamai/flashpilot/releases/latest">
         <h3>Windows（x64）/ Linux / macOS</h3>
         <p data-i18n="dl-cli">v0.1.0 已发布：五个平台架构的 CLI zip + SHA-256 校验，免硬件跑通模拟 ECU 全闭环——五分钟上手见手册。</p>
         <span class="btn btn-primary" data-i18n="dl-watch">前往下载 →</span>
       </a>
-      <a class="dl-card" href="https://github.com/turinglambdaai/flashpilot">
+      <a class="dl-card" href="https://github.com/turlamai/flashpilot">
         <h3>原生宿主</h3>
         <p data-i18n="dl-host">原生壳随 Rivet 线推进，三平台安装包随首个发布一起交付。</p>
         <span class="btn btn-secondary" data-i18n="dl-progress">了解进展 →</span>
@@ -193,15 +193,15 @@ raco pkg install --auto --name flashpilot --link racket</div>
     </ul>
   </section>
 <section id="start-here" class="product-start" aria-label="Get started / 开始使用">
-<h2 class="reader-en " lang="en">Start with one useful session.</h2><h2 class="reader-zh " lang="zh">从一次有效使用开始。</h2><p class="reader-en start-status" lang="en">The AGPL engine, CLI and MCP remain free, including CI use under the existing licence. Validated official engineering assets are planned; no paid edition is on sale.</p><p class="reader-zh start-status" lang="zh">AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使用。规划有经验证的官方工程资产；付费版尚未开售。</p><p class="reader-en " lang="en">Desktop source/preview paths target macOS, Windows and Linux. The published archive set does not imply every adapter, ECU or bus has been qualified.</p><p class="reader-zh " lang="zh">桌面源码和预览路径面向 macOS、Windows、Linux。发布压缩包不表示所有适配器、ECU 和总线均已合格。</p><div class="product-start-grid"><article><h3 class="reader-en " lang="en">01</h3><h3 class="reader-zh " lang="zh">01</h3><p class="reader-en " lang="en">Read the manual and choose a supplied simulator/example plan.</p><p class="reader-zh " lang="zh">先阅读手册，选择随库提供的模拟器和示例计划。</p></article><article><h3 class="reader-en " lang="en">02</h3><h3 class="reader-zh " lang="zh">02</h3><p class="reader-en " lang="en">Validate the plan and inspect deterministic output, failure status and logs without touching physical equipment.</p><p class="reader-zh " lang="zh">先在不接触真实设备的情况下验证计划，检查确定性输出、失败状态和日志。</p></article><article><h3 class="reader-en " lang="en">03</h3><h3 class="reader-zh " lang="zh">03</h3><p class="reader-en " lang="en">Before hardware use, match the exact adapter/firmware/ECU to a recorded qualification and establish recovery and power-loss procedures.</p><p class="reader-zh " lang="zh">使用真实硬件前，将适配器、固件、ECU 与具体资格记录匹配，并建立恢复与断电处理流程。</p></article></div><p class="reader-en start-limits" lang="en">Packaged simulator acceptance is not hardware-in-the-loop qualification. Consult <a href="https://github.com/turinglambdaai/flashpilot/issues/4">#4</a> for the supported/evidenced matrix; no universal ECU compatibility is claimed.</p><p class="reader-zh start-limits" lang="zh">打包模拟器验收不等于硬件在环资格。支持与证据矩阵见 <a href="https://github.com/turinglambdaai/flashpilot/issues/4">#4</a>；不承诺通用 ECU 兼容。</p><div class="start-links"><a class="reader-en" lang="en" href="https://github.com/turinglambdaai/flashpilot/blob/main/docs/USER-GUIDE.md">Installation, privacy &amp; recovery</a><a class="reader-zh" lang="zh" href="https://github.com/turinglambdaai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md">安装、隐私与恢复</a><a href="https://github.com/turinglambdaai/flashpilot/issues"><span class="reader-en " lang="en">Get help</span><span class="reader-zh " lang="zh">反馈与帮助</span></a></div>
+<h2 class="reader-en " lang="en">Start with one useful session.</h2><h2 class="reader-zh " lang="zh">从一次有效使用开始。</h2><p class="reader-en start-status" lang="en">The AGPL engine, CLI and MCP remain free, including CI use under the existing licence. Validated official engineering assets are planned; no paid edition is on sale.</p><p class="reader-zh start-status" lang="zh">AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使用。规划有经验证的官方工程资产；付费版尚未开售。</p><p class="reader-en " lang="en">Desktop source/preview paths target macOS, Windows and Linux. The published archive set does not imply every adapter, ECU or bus has been qualified.</p><p class="reader-zh " lang="zh">桌面源码和预览路径面向 macOS、Windows、Linux。发布压缩包不表示所有适配器、ECU 和总线均已合格。</p><div class="product-start-grid"><article><h3 class="reader-en " lang="en">01</h3><h3 class="reader-zh " lang="zh">01</h3><p class="reader-en " lang="en">Read the manual and choose a supplied simulator/example plan.</p><p class="reader-zh " lang="zh">先阅读手册，选择随库提供的模拟器和示例计划。</p></article><article><h3 class="reader-en " lang="en">02</h3><h3 class="reader-zh " lang="zh">02</h3><p class="reader-en " lang="en">Validate the plan and inspect deterministic output, failure status and logs without touching physical equipment.</p><p class="reader-zh " lang="zh">先在不接触真实设备的情况下验证计划，检查确定性输出、失败状态和日志。</p></article><article><h3 class="reader-en " lang="en">03</h3><h3 class="reader-zh " lang="zh">03</h3><p class="reader-en " lang="en">Before hardware use, match the exact adapter/firmware/ECU to a recorded qualification and establish recovery and power-loss procedures.</p><p class="reader-zh " lang="zh">使用真实硬件前，将适配器、固件、ECU 与具体资格记录匹配，并建立恢复与断电处理流程。</p></article></div><p class="reader-en start-limits" lang="en">Packaged simulator acceptance is not hardware-in-the-loop qualification. Consult <a href="https://github.com/turlamai/flashpilot/issues/4">#4</a> for the supported/evidenced matrix; no universal ECU compatibility is claimed.</p><p class="reader-zh start-limits" lang="zh">打包模拟器验收不等于硬件在环资格。支持与证据矩阵见 <a href="https://github.com/turlamai/flashpilot/issues/4">#4</a>；不承诺通用 ECU 兼容。</p><div class="start-links"><a class="reader-en" lang="en" href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.md">Installation, privacy &amp; recovery</a><a class="reader-zh" lang="zh" href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md">安装、隐私与恢复</a><a href="https://github.com/turlamai/flashpilot/issues"><span class="reader-en " lang="en">Get help</span><span class="reader-zh " lang="zh">反馈与帮助</span></a></div>
 </section>
 </main>
 
 <footer>
-  <span>AGPL-3.0 · <a href="https://github.com/turinglambdaai/flashpilot">github.com/turinglambdaai/flashpilot</a></span>
+  <span>AGPL-3.0 · <a href="https://github.com/turlamai/flashpilot">github.com/turinglambdaai/flashpilot</a></span>
   <span data-i18n="footer-note">为 agent 与 CI 而生：确定性 JSON、稳定退出码、有界失败证据。Rivet 线——Racket 引擎驱动原生壳。</span>
 </footer>
-<nav id="product-support" aria-label="Support / 支持"><a href="https://github.com/turinglambdaai/flashpilot/issues"><span class="support-zh">反馈</span><span class="support-en" lang="en">Feedback</span></a> <a href="https://github.com/turinglambdaai/flashpilot/releases"><span class="support-zh">发布与更新</span><span class="support-en" lang="en">Releases</span></a> <a href="https://github.com/turinglambdaai/flashpilot/blob/main/LICENSE"><span class="support-zh">源码许可</span><span class="support-en" lang="en">Source license</span></a> <a class="support-zh" href="https://github.com/turinglambdaai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md">使用与帮助</a> <a class="support-en" lang="en" href="https://github.com/turinglambdaai/flashpilot/blob/main/docs/USER-GUIDE.md">Usage & help</a></nav>
+<nav id="product-support" aria-label="Support / 支持"><a href="https://github.com/turlamai/flashpilot/issues"><span class="support-zh">反馈</span><span class="support-en" lang="en">Feedback</span></a> <a href="https://github.com/turlamai/flashpilot/releases"><span class="support-zh">发布与更新</span><span class="support-en" lang="en">Releases</span></a> <a href="https://github.com/turlamai/flashpilot/blob/main/LICENSE"><span class="support-zh">源码许可</span><span class="support-en" lang="en">Source license</span></a> <a class="support-zh" href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md">使用与帮助</a> <a class="support-en" lang="en" href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.md">Usage & help</a></nav>
 
 <script>
 (function () {
