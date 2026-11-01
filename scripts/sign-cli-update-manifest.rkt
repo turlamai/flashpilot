@@ -81,16 +81,16 @@
         (write-signed-manifest signed secret key-id out)))
     ;; Fail closed if the private signer and public key pinned in installed
     ;; clients are inconsistent; the target manifest is never overwritten.
-    (define checked
-      (call-with-input-file temporary
-        (lambda (in)
-          (verify-signed-manifest in public #:key-id key-id))))
-    (unless (and (equal? (update-manifest-application-id checked)
-                         "site.jrtx.flashpilot")
-                 (= (length (update-manifest-artifacts checked))
-                    (length cli-targets)))
-      (error 'sign-cli-update-manifest!
-             "signed CLI release manifest did not round-trip"))
+    (let ([checked
+           (call-with-input-file temporary
+             (lambda (in)
+               (verify-signed-manifest in public #:key-id key-id)))])
+      (unless (and (equal? (update-manifest-application-id checked)
+                           "site.jrtx.flashpilot")
+                   (= (length (update-manifest-artifacts checked))
+                      (length cli-targets)))
+        (error 'sign-cli-update-manifest!
+               "signed CLI release manifest did not round-trip")))
     (rename-file-or-directory temporary output #t))
   output)
 
