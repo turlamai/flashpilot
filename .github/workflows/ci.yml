@@ -47,6 +47,10 @@ jobs:
         run: raco make app/mcp.rkt
       - name: Test (UDS/ISO-TP/flash plans/DTC/providers)
         run: raco test racket/flashpilot
+      - name: Offline signed CLI update trust tests (no release secrets)
+        run: raco test tests/update-policy-test.rkt
+      - name: Compile offline updater policy
+        run: raco make app/update-policy.rkt
       - name: Smoke the CLI (simulated ECU, hardware-free)
         shell: bash
         run: |
