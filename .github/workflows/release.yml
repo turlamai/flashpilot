@@ -149,13 +149,18 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Build SHA256SUMS and verify
+      - name: Validate and stage five canonical platform archives
         run: |
-          cd artifacts
-          sha256sum flashpilot-*.zip > SHA256SUMS
-          sha256sum --check SHA256SUMS
-          ls -la
-
+          set -euo pipefail
+          VERSION="$(printf '%s' "$GITHUB_REF_NAME" | cut -c2-)"
+          mkdir -p public
+          for suffix in linux-arm64 linux-x64 macos-arm64 macos-x64 windows-x64; do
+            name="flashpilot-$VERSION-$suffix.zip"
+            test -s "artifacts/$name" || { echo "::error::Missing $name"; exit 1; }
+            cp "artifacts/$name" "public/$name"
+          done
+          (cd public && sha256sum flashpilot-*.zip | LC_ALL=C sort -k2 > SHA256SUMS && sha256sum --check SHA256SUMS)
+          test "$(grep -c '^' public/SHA256SUMS)" -eq 5
       - name: Build release body (changelog section + checksums)
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -172,11 +177,11 @@ jobs:
             echo ""
             echo "Standalone CLI archives — no Racket installation required. Run \`bin/flashpilot\` on Unix/macOS or \`bin/flashpilot.exe\` on Windows. Racket's platform-specific runtime library placement is preserved."
             echo ""
-            echo "Updates are manual: download the new archive and replace your install (no auto-updater in v0.1.0)."
+            echo "Updates are manual: download the new archive and replace your installation; no in-app updater is bundled."
             echo ""
             echo "### Checksums (SHA-256)"
             echo '```'
-            cat artifacts/SHA256SUMS
+            cat public/SHA256SUMS
             echo '```'
           } >> release-body.md
 
@@ -184,28 +189,19 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/flashpilot-*.zip
-            artifacts/flashpilot-*.zip.sha256
-            artifacts/SHA256SUMS
+            public/flashpilot-*.zip
+            public/SHA256SUMS
           body_path: release-body.md
           generate_release_notes: true
 
-      # Family stable direct links: flashpilot-<os>-<arch>.zip always points at
-      # the newest release (clobbered on every publish), so agents and scripts
-      # can pin a platform without pinning a version.
-      - name: Upload stable aliases (clobber per release)
+      - name: Prune stale release assets on retries
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          mkdir -p artifacts/aliases
-          for f in artifacts/flashpilot-"${VERSION}"-*.zip; do
-            [ -e "$f" ] || continue
-            base="$(basename "$f")"
-            # flashpilot-0.1.0-linux-x64.zip -> flashpilot-linux-x64.zip
-            cp "$f" "artifacts/aliases/${base/${VERSION}-/}"
-          done
-          ls -la artifacts/aliases
-          test "$(ls artifacts/aliases | wc -l)" -eq 5
-          gh release upload "${GITHUB_REF_NAME}" artifacts/aliases/*.zip --clobber
+          set -euo pipefail
+          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' |
+            while IFS= read -r name; do
+              if [ ! -f "public/$name" ]; then
+                gh release delete-asset "$GITHUB_REF_NAME" "$name" --yes
+              fi
+            done
