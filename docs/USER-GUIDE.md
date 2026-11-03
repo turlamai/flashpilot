@@ -22,6 +22,29 @@ Portable CLI archive entry points depend on the release: the published **v0.1.0 
 2. Validate the plan and inspect deterministic output, failure status and logs without touching physical equipment.
 3. Before hardware use, match the exact adapter/firmware/ECU to a recorded qualification and establish recovery and power-loss procedures.
 
+## Diagnostic CLI: `udid` and `request`
+
+The CLI exposes two read/diagnostic operations for scripts and agents. In a source checkout, use the built-in simulated ECU by leaving `--transport` unset:
+
+```sh
+racket app/cli.rkt udid 0xF190
+racket app/cli.rkt request 22F190
+```
+
+- `udid <did>` sends UDS ReadDataByIdentifier (`0x22`) for one hexadecimal, two-byte DID. Both `F190` and `0xF190` are accepted as the DID text.
+- `request <hex>` sends the raw hexadecimal UDS request bytes. For example, `22F190` requests DID `F190`. This is a single request, **not** a flash-plan execution.
+- The default channel is the simulated ECU; supplying a real transport/endpoint changes the target. Use only a qualified bench, authorised adapter and recovery procedure for physical equipment. The example DID is a request format illustration, **not** a promise that every ECU or simulator implements it.
+
+**Interpret JSON and the process exit code together.** For these commands, `ok` indicates the request-level/transport result, while `positive` indicates that the ECU returned a positive UDS response. In particular, `ok: true` is **not** permission to treat the diagnostic operation as a success when `positive: false`. `responseHex` is the returned payload when available, otherwise `null`; raw `request` additionally returns `nrc` (a negative-response code when available, otherwise `null`). The `udid` response does not have an `nrc` field.
+
+For example, a request which reaches the simulated ECU but receives no positive response can be reported as:
+
+```json
+{"ok":true,"positive":false,"responseHex":null}
+```
+
+That `udid` result exits with **1**, not 0. Both `udid` and `request` return exit status **0 only for a positive UDS response** and **1 for a non-positive result**; malformed input and transport setup errors use the CLI's separate error paths. Do not infer success from `ok` alone, and do not rely on `responseHex` being non-null in a failure. For the broader CLI exit-code table and complete command grammar, run `flashpilot --help` (or `racket app/cli.rkt --help` from source). This section describes the current implementation, not evidence of a physical ECU qualification.
+
 ## Data, backup and recovery
 
 Keep plan files, firmware digests, adapter versions and run logs together. Preserve the original ECU/firmware recovery material outside the application directory. Redact identifiers and proprietary firmware before sharing logs.
