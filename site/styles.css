@@ -126,8 +126,8 @@ h1 { font-size: clamp(32px, 5vw, 46px); line-height: 1.15; margin: 0 0 18px; }
 .section.alt { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px 28px; margin: 32px 0; }
 .section h2 { font-size: 24px; margin: 0 0 20px; }
 .grid { display: grid; gap: 16px; }
-.three { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.three { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 
 .card {
   background: var(--surface);
@@ -167,7 +167,7 @@ h1 { font-size: clamp(32px, 5vw, 46px); line-height: 1.15; margin: 0 0 18px; }
 .step p { margin: 0 0 12px; color: var(--muted); font-size: 15px; }
 
 /* ---- download ---- */
-.dl-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.dl-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 .dl-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -225,3 +225,8 @@ footer a { color: inherit; }
   .nav-inner { flex-direction: column; align-items: flex-start; }
   .hero { padding: 44px 0 36px; }
 }
+
+/* The unbroken CLI command is scrollable inside its step, not a
+   min-content width constraint on the whole page. */
+.step > div:last-child { min-width: 0; flex: 1 1 auto; }
+.step .code { max-width: 100%; }
