@@ -209,28 +209,57 @@
                     (/ (- (now-millis) sw) 1.0)
                     #f))))
 
-    ;; 3. Erase per segment.
-    (let ([sw (now-millis)])
+    ;; 3. Erase per segment — single-shot by default; when the plan pins
+    ;; erasePoll, repeat routine-start (same record — slice-erase ECUs
+    ;; track the window internally) until the status byte reports done,
+    ;; at most max-rounds rounds.
+    (let ([sw (now-millis)]
+          [poll (uds-flash-plan-erase-poll plan)])
+      (define starts 0)
       (for ([seg (in-list (uds-flash-plan-segments plan))])
-        (define response
-          (uds-require-positive client
-                                (uds-routine-control routine-start
-                                                     (uds-flash-plan-erase-routine-id plan)
-                                                     (encode-routine-address-and-size
-                                                      (uds-flash-segment-address seg)
-                                                      (length (uds-flash-segment-data seg))))
-                                #:timing (engine-timing plan)
-                                #:cancel cancel))
-        (define routine-id (bitwise-ior (arithmetic-shift (second response) 8) (third response)))
-        (when (or (< (length response) 4)
-                  (not (= (first response) routine-start))
-                  (not (= routine-id (uds-flash-plan-erase-routine-id plan))))
-          (fail! (format "Erase routine response mismatch (got ~a)." (bytes->hex response)))))
+        (define record
+          (encode-routine-address-and-size
+           (uds-flash-segment-address seg)
+           (length (uds-flash-segment-data seg))))
+        (let erase-loop ([round 1])
+          (set! starts (add1 starts))
+          (define response
+            (uds-require-positive client
+                                  (uds-routine-control routine-start
+                                                       (uds-flash-plan-erase-routine-id plan)
+                                                       record)
+                                  #:timing (if poll
+                                               (uds-timing
+                                                (erase-poll-round-timeout-ms poll)
+                                                (uds-flash-plan-p2-star-timeout-ms plan))
+                                               (engine-timing plan))
+                                  #:cancel cancel))
+          (define routine-id (bitwise-ior (arithmetic-shift (second response) 8) (third response)))
+          (when (or (< (length response) 4)
+                    (not (= (first response) routine-start))
+                    (not (= routine-id (uds-flash-plan-erase-routine-id plan))))
+            (fail! (format "Erase routine response mismatch (got ~a)." (bytes->hex response))))
+          (when poll
+            ;; Payload after the SID echoes [kind, id-hi, id-lo, status].
+            (define status (if (>= (length response) 4) (fourth response) #f))
+            (cond
+              [(and status (= status (erase-poll-status-byte poll))) (void)]
+              [(< round (erase-poll-max-rounds poll)) (erase-loop (add1 round))]
+              [else
+               (fail! (format "Erase did not reach status 0x~a within ~a start(s) (last status ~a)."
+                              (hex-up (erase-poll-status-byte poll) 2)
+                              (erase-poll-max-rounds poll)
+                              (if status (format "0x~a" (hex-up status 2)) "absent")))]))))
       (add-step! (flash-step-summary "erase"
                                      #t
-                                     (format "~a segment(s) erased via routine 0x~a."
-                                             (length (uds-flash-plan-segments plan))
-                                             (hex-up (uds-flash-plan-erase-routine-id plan) 4))
+                                     (if poll
+                                         (format "~a segment(s) erased via routine 0x~a in ~a start(s)."
+                                                 (length (uds-flash-plan-segments plan))
+                                                 (hex-up (uds-flash-plan-erase-routine-id plan) 4)
+                                                 starts)
+                                         (format "~a segment(s) erased via routine 0x~a."
+                                                 (length (uds-flash-plan-segments plan))
+                                                 (hex-up (uds-flash-plan-erase-routine-id plan) 4)))
                                      (/ (- (now-millis) sw) 1.0)
                                      #f)))
 

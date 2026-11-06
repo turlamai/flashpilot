@@ -56,4 +56,32 @@
     (check-equal?
      (identity-json (list (identity-check #xFD00 (bytes->list (string->bytes/utf-8 "ready")))))
      (list (hasheq 'did #xFD00 'valueHex "7265616479"))))
+
+  (test-case "erasePoll absent yields no polling"
+    (check-false (uds-flash-plan-erase-poll (parse "{}"))))
+
+  (test-case "erasePoll parses all three required fields"
+    (define poll
+      (uds-flash-plan-erase-poll
+       (parse "{\"erasePoll\":{\"statusByte\":\"0x55\",\"maxRounds\":8,\"roundTimeoutMs\":5000}}")))
+    (check-equal? (erase-poll-status-byte poll) #x55)
+    (check-equal? (erase-poll-max-rounds poll) 8)
+    (check-equal? (erase-poll-round-timeout-ms poll) 5000))
+
+  (test-case "erasePoll statusByte accepts plain integers"
+    (check-equal? (erase-poll-status-byte
+                   (uds-flash-plan-erase-poll
+                    (parse "{\"erasePoll\":{\"statusByte\":85,\"maxRounds\":1,\"roundTimeoutMs\":10}}")))
+                  85))
+
+  (test-case "erasePoll rejects out-of-range or missing fields"
+    (define (parse-erase json) (parse json))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"erasePoll\":{\"statusByte\":256,\"maxRounds\":1,\"roundTimeoutMs\":10}}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"erasePoll\":{\"statusByte\":\"0x55\",\"roundTimeoutMs\":10}}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"erasePoll\":{\"statusByte\":\"0x55\",\"maxRounds\":0,\"roundTimeoutMs\":10}}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"erasePoll\":{\"statusByte\":\"0x55\",\"maxRounds\":2}}"))))
 )

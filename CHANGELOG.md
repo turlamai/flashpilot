@@ -35,6 +35,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   transport, audited steps with timings, identity/fingerprint gate records
   and the outcome. Failed attempts write the same report; stdout JSON is
   unchanged.
+- **Polled erase** — plans accept `erasePoll` (`statusByte`/`maxRounds`/
+  `roundTimeoutMs`): the engine repeats the erase routine with the same
+  record until the status byte reports done — the pattern slice-erase
+  ECUs require — and aborts with bounded evidence when maxRounds is
+  exhausted. Unset plans keep the historical single-shot erase. The
+  simulated ECU gains an opt-in `erase-rounds-to-done` mode so the loop
+  and its exhaustion path are CI-proven (issue #34).
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level

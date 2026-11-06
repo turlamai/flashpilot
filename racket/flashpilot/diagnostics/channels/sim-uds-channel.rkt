@@ -120,7 +120,9 @@
                  erased-box
                  erase-count-box
                  verify-count-box
-                 dtc-box)
+                 dtc-box
+                 erase-rounds-box ; #f | remaining in-progress erase answers before done
+                 erase-rounds-init-box) ; the value erase-rounds-box restores to on ECU reset
   #:transparent)
 
 (define no-reply (uds-server-response '() -1))
@@ -137,7 +139,12 @@
 
 (define hex-up (lambda (n width) (string-upcase (~r n #:base 16 #:min-width width #:pad-string "0"))))
 
-(define (make-uds-processor [options (default-uds-ecu-options)])
+;; Synthetic in-progress / done status bytes for the polled-erase mode.
+(define sim-erase-busy-status #x01)
+(define sim-erase-done-status #x55)
+
+(define (make-uds-processor [options (default-uds-ecu-options)]
+                            #:erase-rounds-to-done [erase-rounds #f])
   (uds-processor options
                  (make-semaphore 1)
                  (box uds-session-default)
@@ -149,7 +156,9 @@
                  (box #f)
                  (box 0)
                  (box 0)
-                 (box (list (hasheq 'dtc #x010870 'status #x2F)))))
+                 (box (list (hasheq 'dtc #x010870 'status #x2F)))
+                 (box erase-rounds)
+                 (box erase-rounds)))
 
 (define (negative sid nrc)
   (uds-server-response (list #x7F sid nrc) 0))
@@ -368,15 +377,26 @@
              [(zero? (unbox (uds-processor-security-box p))) (negative (car request) #x33)]
              [(not (= (length record) 8)) (negative (car request) #x13)]
              [else
-              (with-mutex* (uds-processor-mutex p)
-                           (lambda ()
-                             (set-box! (uds-processor-erased-box p) #t)
-                             (set-box! (uds-processor-erase-count-box p)
-                                       (add1 (unbox (uds-processor-erase-count-box p))))
-                             (hash-set! (uds-processor-transfer-box p) 'buffer '())))
+              (define status
+                (with-mutex* (uds-processor-mutex p)
+                             (lambda ()
+                               (set-box! (uds-processor-erased-box p) #t)
+                               (set-box! (uds-processor-erase-count-box p)
+                                         (add1 (unbox (uds-processor-erase-count-box p))))
+                               (hash-set! (uds-processor-transfer-box p) 'buffer '())
+                               (define rounds-box (uds-processor-erase-rounds-box p))
+                               (define remain (unbox rounds-box))
+                               (cond
+                                 [(not remain) #x00]
+                                 [(= remain 1)
+                                  (set-box! rounds-box #f)
+                                  sim-erase-done-status]
+                                 [else
+                                  (set-box! rounds-box (sub1 remain))
+                                  sim-erase-busy-status]))))
               (uds-server-response
                (append
-                (list (bitwise-ior (car request) #x40) kind (third request) (fourth request) #x00))
+                (list (bitwise-ior (car request) #x40) kind (third request) (fourth request) status))
                (uds-ecu-options-erase-delay-ms options))])]
           [(and (= routine-id builtin-routine-verify) (= kind routine-start))
            (if (not (= (length record) 4))
@@ -505,7 +525,9 @@
                            (set-box! (uds-processor-session-box p) uds-session-default)
                            (set-box! (uds-processor-security-box p) 0)
                            (reset-transfer! p)
-                           (set-box! (uds-processor-erased-box p) #f)))
+                           (set-box! (uds-processor-erased-box p) #f)
+                           (set-box! (uds-processor-erase-rounds-box p)
+                                     (unbox (uds-processor-erase-rounds-init-box p)))))
             (uds-server-response (list (bitwise-ior (car request) #x40) (second request))
                                  (uds-ecu-options-response-delay-ms options))))))
 
@@ -520,8 +542,10 @@
                                 #:tester-to-ecu-id [tester-to-ecu-id #x7E0]
                                 #:ecu-to-tester-id [ecu-to-tester-id #x7E8]
                                 #:options [options #f]
-                                #:isotp-options [isotp-opts #f])
-  (define processor (make-uds-processor (or options (default-uds-ecu-options))))
+                                #:isotp-options [isotp-opts #f]
+                                #:erase-rounds-to-done [erase-rounds #f])
+  (define processor (make-uds-processor (or options (default-uds-ecu-options))
+                                        #:erase-rounds-to-done erase-rounds))
   (define ecu-port-bus (make-sim-can-port-bus (simulated-can-bus-attach bus) "sim-ecu"))
   (sim-can-port-bus-open! ecu-port-bus)
   (define endpoint
@@ -651,7 +675,8 @@
                     (uds-flash-plan-block-retries spec)
                     (uds-flash-plan-p2-timeout-ms spec)
                     (uds-flash-plan-p2-star-timeout-ms spec)
-                    (uds-flash-plan-expected-identity spec)))
+                    (uds-flash-plan-expected-identity spec)
+                    (uds-flash-plan-erase-poll spec)))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))])
     (flash-execute (unbox (can-uds-channel-engine-box c)) plan)))
 
@@ -670,7 +695,8 @@
                           mutex
                           bus
                           ecu-box
-                          channel-box))
+                          channel-box
+                          erase-rounds-to-done))
 
 (define (make-sim-uds-channel #:tester-to-ecu-id [tester-to-ecu-id #x7E0]
                               #:ecu-to-tester-id [ecu-to-tester-id #x7E8]
@@ -678,7 +704,8 @@
                               #:key-deriver-name [key-deriver-name "xor0x5a"]
                               #:max-block-payload [max-block-payload 1024]
                               #:ecu-options [ecu-options #f]
-                              #:data-length [data-length 8])
+                              #:data-length [data-length 8]
+                              #:erase-rounds-to-done [erase-rounds #f])
   (sim-uds-channel tester-to-ecu-id
                    ecu-to-tester-id
                    security-level
@@ -689,7 +716,8 @@
                    (make-semaphore 1)
                    (make-simulated-can-bus)
                    (box #f)
-                   (box #f)))
+                   (box #f)
+                   erase-rounds))
 
 (define (sim-channel-transport c)
   "iso-tp/can (simulated)")
@@ -704,7 +732,8 @@
                                          #:tester-to-ecu-id (sim-uds-channel-tester-to-ecu-id c)
                                          #:ecu-to-tester-id (sim-uds-channel-ecu-to-tester-id c)
                                          #:options (sim-uds-channel-ecu-options c)
-                                         #:isotp-options (sim-uds-channel-isotp-options c)))
+                                         #:isotp-options (sim-uds-channel-isotp-options c)
+                                         #:erase-rounds-to-done (sim-uds-channel-erase-rounds-to-done c)))
        (set-box! (sim-uds-channel-channel-box c)
                  (make-can-uds-channel
                   (make-sim-can-port-bus (simulated-can-bus-attach (sim-uds-channel-bus c))

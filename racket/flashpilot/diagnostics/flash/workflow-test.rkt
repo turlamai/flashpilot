@@ -28,7 +28,8 @@
                     0
                     1000
                     10000
-                    '()))
+                    '()
+                    #f))
 
   (define (identity-plan-for image checks)
     (struct-copy uds-flash-plan (flash-plan-for image) [expected-identity checks]))
@@ -154,4 +155,35 @@
        (identity-plan-for test-image
                           (list (identity-check #xFD00 (hex-parse "72 65 61 64 79"))))))
     (check-true (uds-flash-result-ok result)))
+
+  (test-case "polled erase repeats until the done status byte"
+    (define channel (make-sim-uds-channel #:erase-rounds-to-done 3))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [erase-poll (erase-poll #x55 8 5000)]))
+    (define result (sim-channel-flash channel plan))
+    (check-true (uds-flash-result-ok result))
+    (define processor (simulated-uds-ecu-processor (unbox (sim-uds-channel-ecu-box channel))))
+    ;; Three erase starts: two in-progress answers, then the done byte.
+    (check-equal? (uds-processor-erase-count processor) 3)
+    (define erase-step (findf (lambda (s) (string=? (flash-step-summary-step s) "erase"))
+                              (uds-flash-result-steps result)))
+    (check-true (string-contains? (flash-step-summary-detail erase-step) "in 3 start(s)")))
+
+  (test-case "polled erase aborts when the done status never arrives"
+    (define channel (make-sim-uds-channel #:erase-rounds-to-done 100))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [erase-poll (erase-poll #x55 4 1000)]))
+    (define result (sim-channel-flash channel plan))
+    (check-false (uds-flash-result-ok result))
+    (define abort (findf (lambda (s) (string=? (flash-step-summary-step s) "abort"))
+                         (uds-flash-result-steps result)))
+    (check-not-false abort)
+    (check-true (string-contains? (flash-step-summary-detail abort)
+                                  "did not reach status 0x55 within 4 start(s)"))
+    (define processor (simulated-uds-ecu-processor (unbox (sim-uds-channel-ecu-box channel))))
+    (check-equal? (uds-processor-erase-count processor) 4)
+    ;; The abort happened before any download.
+    (check-equal? (uds-processor-received-image processor) '()))
 )

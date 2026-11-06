@@ -20,6 +20,7 @@
 (provide (struct-out uds-flash-plan)
          (struct-out uds-flash-segment)
          (struct-out identity-check)
+         (struct-out erase-poll)
          (struct-out flash-power-guard)
          (struct-out uds-flash-hardening)
          uds-flash-hardening-plan
@@ -41,7 +42,8 @@
                   block-retries
                   p2-timeout-ms
                   p2-star-timeout-ms
-                  expected-identity)
+                  expected-identity
+                  erase-poll)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -49,6 +51,13 @@
 ;; exact byte sequence the positive response must carry after the echoed
 ;; DID bytes.
 (struct identity-check (did value) #:transparent)
+
+;; Polled erase: slice-erase ECUs answer each erase routine-start with a
+;; vendor status byte (in-progress vs done); the engine repeats the start
+;; with the same address/size record until the byte reports done, at most
+;; max-rounds rounds, each bounded by round-timeout-ms. Absent →
+;; single-shot erase, exactly the historical behavior.
+(struct erase-poll (status-byte max-rounds round-timeout-ms) #:transparent)
 
 ;; Shared JSON shape for configured identity gates (CLI verify, bench RPC).
 (define (identity-json checks)
@@ -124,6 +133,29 @@
           (format "expectedIdentity DID 0x~a needs value (UTF-8) or valueHex (hex)." did-hex))]))
     (identity-check did value)))
 
+;; erasePoll entries: all three fields required when the object is present
+;; — an explicit plan is the reviewable artifact, no hidden defaults.
+(define (parse-erase-poll raw)
+  (unless (hash? raw)
+    (raise-validation "Flash plan erasePoll must be an object."))
+  (define status-raw (hash-ref raw 'statusByte #f))
+  (define status-byte
+    (cond
+      [(exact-integer? status-raw) status-raw]
+      [(and (string? status-raw) (string-prefix? (string-downcase status-raw) "0x"))
+       (string->number (substring status-raw 2) 16)]
+      [else #f]))
+  (unless (and status-byte (exact-integer? status-byte) (<= 0 status-byte 255))
+    (raise-validation
+     (format "Invalid erasePoll statusByte '~a' (use 0x00..0xFF)." status-raw)))
+  (define max-rounds (hash-ref raw 'maxRounds #f))
+  (unless (and (exact-integer? max-rounds) (>= max-rounds 1))
+    (raise-validation "erasePoll maxRounds must be an integer >= 1."))
+  (define round-timeout (hash-ref raw 'roundTimeoutMs #f))
+  (unless (and (exact-integer? round-timeout) (> round-timeout 0))
+    (raise-validation "erasePoll roundTimeoutMs must be an integer > 0."))
+  (erase-poll status-byte max-rounds round-timeout))
+
 (define (read-flash-plan-json text)
   (define doc
     (with-handlers ([exn:fail? (lambda (e)
@@ -172,7 +204,9 @@
                     (or (hash-ref doc 'p2TimeoutMs #f) 1000)
                     (or (hash-ref doc 'p2StarTimeoutMs #f) 10000)
                     (let ([raw (hash-ref doc 'expectedIdentity #f)])
-                      (if raw (parse-identity-entries raw) '()))))
+                      (if raw (parse-identity-entries raw) '()))
+                    (let ([raw (hash-ref doc 'erasePoll #f)])
+                      (and raw (parse-erase-poll raw)))))
   (define on-fail-raw (hash-ref doc 'onFail #f))
   (define on-fail
     (cond

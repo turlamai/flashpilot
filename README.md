@@ -112,6 +112,7 @@ Every command prints one JSON object — camelCase fields, stable names, bounded
 - `onFail` — `retry` or `resetAndRetry` (best-effort ECU reset, then one retry).
 - `powerGuard` — polls the bench supply while programming; out-of-band current powers off and aborts.
 - `expectedIdentity` — ECU identification gate: DIDs are read and compared byte-exact as the first flash step; a wrong target is never touched.
+- `erasePoll` — polled erase for slice-erase ECUs: repeat the erase routine until a status byte reports done (`statusByte`/`maxRounds`/`roundTimeoutMs`), abort honestly on exhaustion.
 - `expectedFingerprint` — pins the image; mismatch is rejected before any driver call.
 
 Segments take inline hex (`data`) or raw `.bin` files (`file`), resolved relative to the plan's directory. Intel HEX / S-record parsing ships in the image model; plan-level wiring for `.hex`/`.s19` files is coming. Seed-key algorithms beyond the built-ins plug in as external commands: `"keyDeriver": "command:./my-oem-algo"`.
