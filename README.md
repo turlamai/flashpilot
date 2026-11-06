@@ -95,6 +95,8 @@ Every command prints one JSON object — camelCase fields, stable names, bounded
 
 `flash <plan> --report <path>` additionally writes the run as a `flashpilot.report/v1` evidence artifact: UTC start, transport, the audited steps with timings, the identity and fingerprint gate records, the outcome. Failed runs write the same report — the failure is the evidence that matters most.
 
+`--transport doip --reconnect N [--reconnect-delay-ms MS]` retries on connection drops (an ECU resetting takes its link down and stays unreachable through its boot window) — bounded attempts, fresh connect + routing activation each round; UDS failures are never retried by this layer.
+
 ## Flash plans
 
 ```json

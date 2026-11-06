@@ -78,7 +78,11 @@
                                 #x0E00)
                             (or (string->number
                                  (format "0x~a" (hash-ref args 'ecu "0E10")))
-                                #x0E10))]
+                                #x0E10)
+                            #:reconnect-attempts
+                            (or (string->number (hash-ref args 'reconnect #f)) 0)
+                            #:reconnect-delay-ms
+                            (or (string->number (hash-ref args 'reconnect-delay-ms #f)) 1000))]
     [else (make-sim-uds-channel #:data-length data-length)]))
 
 (define (channel-request ch request)
@@ -119,6 +123,7 @@
     "  --transport doip --host H [--port N]  DoIP transport (default sim ECU)\n"
     "  --transport lin                       simulated LIN (UDS over LIN)\n"
     "  --report <path>                       write a flash report (JSON evidence artifact, failed runs included)\n"
+    "  --reconnect N [--reconnect-delay-ms MS]  DoIP: retry on connection drops (ECU reboot windows)\n"
     "\n"
     "Exit codes: 0 ok · 1 flash/assert failed · 2 usage · 3 not found · 4 transport\n")))
 

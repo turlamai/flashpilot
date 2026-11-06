@@ -65,6 +65,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   ECU at the identity gate) never replay. `onFail` moved onto the
   engine-facing plan record; `powerGuard` remains the one documented
   parsed-not-enforced field (issue #40).
+- **DoIP bounded reconnect** — `--reconnect N [--reconnect-delay-ms MS]`
+  (DoIP transport): after an EcuReset drops the TCP link, the channel
+  re-establishes it (fresh connect + routing activation) within bounded
+  attempts, so the post-reset confirmation gate keeps polling across the
+  ECU's reboot window. Connection-class errors only — UDS negative
+  responses and NACKs are never retried by this layer; with reconnect
+  disabled the historical stop-at-error behavior is unchanged. A
+  simulated DoIP entity that closes its link on reset and refuses
+  connections for a window proves the reconnect and exhaustion paths in
+  CI (issue #42).
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level

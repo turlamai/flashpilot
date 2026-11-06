@@ -180,6 +180,7 @@ flashpilot flash plan.doip.json --transport doip --host 192.168.0.1 --port 13400
         <li data-i18n="g.flash-f1">--tester / --ecu 是 DoIP 逻辑地址（十六进制），默认 0E00 / 0E10；--port 缺省 13400。</li>
         <li data-i18n="g.flash-f2">计划里的 expectedIdentity 身份门、onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。</li>
         <li data-i18n="g.flash-f3">成功时 steps 数组是六步审计轨迹；失败时 error 给有界原因，退出码 1。</li>
+        <li data-i18n="g.flash-f5">--transport doip 加 --reconnect N（可选 --reconnect-delay-ms MS）：复位断链后有界重连（全新连接 + 路由激活），让复位后确认门跨过 ECU 引导窗口持续轮询；UDS 层失败不归这层重试。</li>
         <li data-i18n="g.flash-f4">--report &lt;路径&gt; 把这次烧录落成 flashpilot.report/v1 证据工件：UTC 开始时间、传输、逐步审计与耗时、身份门期望与指纹门记录都在报告里；失败也落同样的报告。</li>
       </ul>
     </section>
@@ -362,6 +363,7 @@ flashpilot dtc clear</div>
       'g.flash-f2': 'The plan’s expectedIdentity identification gate, onFail (retry / resetAndRetry), powerGuard (out-of-band current cuts power and aborts) and expectedFingerprint gate all take effect in this one command.',
       'g.flash-f3': 'On success the steps array is the six-step audit trail; on failure error carries a bounded reason and the exit code is 1.',
       'g.flash-f4': '--report <path> writes the run as a flashpilot.report/v1 evidence artifact: UTC start, transport, audited steps with timings, identity-gate expectations and the fingerprint gate — failed runs write the same report.',
+      'g.flash-f5': 'With --transport doip, --reconnect N (optional --reconnect-delay-ms MS) re-establishes the link after a reset drop — bounded rounds of fresh connect + routing activation — so the post-reset gate keeps polling across the ECU reboot window; UDS-level failures are never retried by this layer.',
       'g.verify-p': 'Validates the plan and computes the image fingerprint without touching any ECU — the mandatory gate before real hardware, and step one of pinning an image into a plan:',
       'g.verify-flow': 'Recommended loop: verify to learn the fingerprint → write it into the plan’s expectedFingerprint → verify again to see match:true → only then flash. With the pin in place:',
       'g.dtc-p': 'Diagnostic trouble codes: read uses UDS 0x19 readDTCInformation, clear uses 0x14 clearDiagnosticInformation. --transport doip switches to a real ECU.',
@@ -448,6 +450,7 @@ flashpilot dtc clear</div>
       'g.flash-f2': '计划里的 expectedIdentity 身份门、onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。',
       'g.flash-f3': '成功时 steps 数组是六步审计轨迹；失败时 error 给有界原因，退出码 1。',
       'g.flash-f4': '--report &lt;路径&gt; 把这次烧录落成 flashpilot.report/v1 证据工件：UTC 开始时间、传输、逐步审计与耗时、身份门期望与指纹门记录都在报告里；失败也落同样的报告。',
+      'g.flash-f5': '--transport doip 加 --reconnect N（可选 --reconnect-delay-ms MS）：复位断链后有界重连（全新连接 + 路由激活），让复位后确认门跨过 ECU 引导窗口持续轮询；UDS 层失败不归这层重试。',
       'g.verify-p': '只做计划校验与指纹计算，完全不接触 ECU——上真机前的强制关卡，也是把镜像钉进计划的工作流起点：',
       'g.verify-flow': '推荐工作流：verify 拿到 fingerprint → 写进计划的 expectedFingerprint → 再 verify 一次确认 match:true → 才允许 flash。写好之后：',
       'g.dtc-p': '诊断故障码：read 走 UDS 0x19 readDTCInformation，clear 走 0x14 clearDiagnosticInformation。支持 --transport doip 切真机。',
