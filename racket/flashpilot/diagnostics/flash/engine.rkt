@@ -152,23 +152,62 @@
                                              (elapsed-ms)
                                              (reverse steps)
                                              message))))
+  (define (fail-permanently! message [nrc #f])
+    (add-step! (flash-step-summary "abort" #f message (elapsed-ms) nrc))
+    (raise (exn:fail:flash:permanent
+            (format "Flash workflow failed: ~a" message)
+            (current-continuation-marks)
+            (uds-flash-result #f
+                              (length (uds-flash-plan-segments plan))
+                              total-bytes
+                              (elapsed-ms)
+                              (reverse steps)
+                              message))))
 
-  (with-handlers ([exn:fail:flash? (lambda (e) (raise e))]
-                  [exn:fail:uds? (lambda (e)
-                                   (fail! (exn-message e)
-                                          (and (exn:fail:uds-nrc e)
-                                               (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))]
-                  [exn:benchpilot:cancelled?
-                   (lambda (e)
-                     (add-step! (flash-step-summary "abort" #f (exn-message e) (elapsed-ms) #f))
-                     (raise (exn:fail:flash (format "Flash workflow failed: ~a" (exn-message e))
-                                            (current-continuation-marks)
-                                            (uds-flash-result #f
-                                                              (length (uds-flash-plan-segments plan))
-                                                              total-bytes
-                                                              (elapsed-ms)
-                                                              (reverse steps)
-                                                              (exn-message e)))))])
+  ;; onFail recovery envelope: a non-permanent failure in the first
+  ;; attempt replays the whole transaction once — fresh session, fresh
+  ;; erase, semantically identical to the operator re-running the CLI.
+  ;; Permanent failures (wrong ECU) and cancellation never replay.
+  (define on-fail (uds-flash-plan-on-fail plan))
+  (let recovery-loop ([attempt 1])
+    (with-handlers
+        ([exn:fail:flash:permanent? (lambda (e) (raise e))]
+         [exn:fail:flash?
+          (lambda (e)
+            (cond
+              [(and (= attempt 1) on-fail)
+               ;; resetAndRetry: best-effort hard reset first — a stuck
+               ;; programming session clears with the reset; outcome of
+               ;; the reset itself never changes the decision.
+               (when (eq? on-fail 'resetAndRetry)
+                 (with-handlers ([exn:fail:uds? (lambda (_) (void))])
+                   (uds-require-positive client (uds-ecu-reset 1)
+                                         #:timing (uds-timing 5000 5000)
+                                         #:cancel cancel)))
+               (add-step! (flash-step-summary
+                           "recovery" #t
+                           (format "onFail ~a: replaying the transaction (attempt 2)." on-fail)
+                           (elapsed-ms) #f))
+               (recovery-loop 2)]
+              [else (raise e)]))])
+      (with-handlers
+          ([exn:fail:uds?
+            (lambda (e)
+              (fail! (exn-message e)
+                     (and (exn:fail:uds-nrc e)
+                          (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))]
+           [exn:benchpilot:cancelled?
+            (lambda (e)
+              (add-step! (flash-step-summary "abort" #f (exn-message e) (elapsed-ms) #f))
+              (raise (exn:fail:flash:permanent
+                      (format "Flash workflow failed: ~a" (exn-message e))
+                      (current-continuation-marks)
+                      (uds-flash-result #f
+                                        (length (uds-flash-plan-segments plan))
+                                        total-bytes
+                                        (elapsed-ms)
+                                        (reverse steps)
+                                        (exn-message e)))))])
     ;; 0. ECU identification gate: read every configured DID and compare
     ;; exact bytes while the ECU still sits in whatever session it powered
     ;; up in — a wrong target aborts before session, unlock or erase ever
@@ -181,10 +220,11 @@
             (with-handlers
                 ([exn:fail:uds?
                   (lambda (e)
-                    (fail! (format "ECU identity DID 0x~a read failed: ~a"
-                                   did-hex (exn-message e))
-                           (and (exn:fail:uds-nrc e)
-                                (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))])
+                    (fail-permanently!
+                     (format "ECU identity DID 0x~a read failed: ~a"
+                             did-hex (exn-message e))
+                     (and (exn:fail:uds-nrc e)
+                          (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))])
               (uds-require-positive client
                                     (uds-read-did (identity-check-did chk))
                                     #:timing (engine-timing plan)
@@ -192,10 +232,11 @@
           ;; Positive response payload: echoed DID bytes then the value.
           (define actual (if (>= (length payload) 2) (drop payload 2) '()))
           (unless (equal? actual (identity-check-value chk))
-            (fail! (format "ECU identity DID 0x~a mismatch: expected ~a, got ~a."
-                           did-hex
-                           (truncate-hex (identity-check-value chk))
-                           (truncate-hex actual)))))
+            (fail-permanently!
+             (format "ECU identity DID 0x~a mismatch: expected ~a, got ~a."
+                     did-hex
+                     (truncate-hex (identity-check-value chk))
+                     (truncate-hex actual)))))
         (add-step! (flash-step-summary
                     "identity"
                     #t
@@ -447,11 +488,15 @@
                             (truncate-hex last-payload)))]
             [else (poll)]))))
 
-    (uds-flash-result #t
-                      (length (uds-flash-plan-segments plan))
-                      total-bytes
-                      (elapsed-ms)
-                      (reverse steps)
-                      #f)))
+        (uds-flash-result #t
+                          (length (uds-flash-plan-segments plan))
+                          total-bytes
+                          (elapsed-ms)
+                          (reverse steps)
+                          #f)))))
 
 (struct exn:fail:flash exn:fail (execution) #:transparent)
+
+;; Permanent failures (wrong ECU, unsupported identity DID) never enter a
+;; recovery round — a wrong target must not be touched twice.
+(struct exn:fail:flash:permanent exn:fail:flash ())

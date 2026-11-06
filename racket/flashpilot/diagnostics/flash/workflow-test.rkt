@@ -31,6 +31,7 @@
                     '()
                     #f
                     '()
+                    #f
                     #f))
 
   (define (identity-plan-for image checks)
@@ -255,5 +256,49 @@
     (check-true (string-contains? (flash-step-summary-detail abort)
                                   "never matched within 600 ms"))
     (check-true (string-contains? (flash-step-summary-detail abort) "7265616479")))
+
+  (test-case "onFail retry replays the transaction after a transient failure"
+    (define channel (make-sim-uds-channel #:fail-once-requests (list #x10)))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image) [on-fail 'retry]))
+    (define result (sim-channel-flash channel plan))
+    (check-true (uds-flash-result-ok result))
+    ;; Attempt 1 died at the session step (only its abort is audited);
+    ;; the recovery step names the mode; attempt 2 ran the full sequence.
+    (check-equal? (map flash-step-summary-step (uds-flash-result-steps result))
+                  '("abort" "recovery" "diagnostic-session" "security-access" "erase"
+                    "download" "verify" "ecu-reset")))
+
+  (test-case "onFail unset stops at the first failure"
+    (define channel (make-sim-uds-channel #:fail-once-requests (list #x10)))
+    (define result (sim-channel-flash channel (flash-plan-for test-image)))
+    (check-false (uds-flash-result-ok result))
+    (check-equal? (map flash-step-summary-step (uds-flash-result-steps result))
+                  '("abort")))
+
+  (test-case "resetAndRetry resets before replaying"
+    (define channel (make-sim-uds-channel #:fail-once-requests (list #x27)))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image) [on-fail 'resetAndRetry]))
+    (define result (sim-channel-flash channel plan))
+    (check-true (uds-flash-result-ok result))
+    (define recovery
+      (findf (lambda (s) (string=? (flash-step-summary-step s) "recovery"))
+             (uds-flash-result-steps result)))
+    (check-true (string-contains? (flash-step-summary-detail recovery) "resetAndRetry")))
+
+  (test-case "identity failures never enter a recovery round"
+    (define channel (make-sim-uds-channel #:fail-once-requests (list #x10)))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [on-fail 'retry]
+                   [expected-identity
+                    (list (identity-check #xF195
+                                          (bytes->list (string->bytes/utf-8 "wrong-ecu"))))]))
+    (define result (sim-channel-flash channel plan))
+    (check-false (uds-flash-result-ok result))
+    (define names (map flash-step-summary-step (uds-flash-result-steps result)))
+    (check-equal? names '("abort"))
+    (check-false (findf (lambda (s) (string=? s "recovery")) names)))
 )
 

@@ -123,7 +123,8 @@
                  dtc-box
                  erase-rounds-box ; #f | remaining in-progress erase answers before done
                  erase-rounds-init-box ; the value erase-rounds-box restores to on ECU reset
-                 extra-routines-box) ; set of synthetic routine ids accepted in programming session
+                 extra-routines-box ; set of synthetic routine ids accepted in programming session
+                 fail-once-box) ; set of SIDs that answer busyRepeatRequest once, then behave
   #:transparent)
 
 (define no-reply (uds-server-response '() -1))
@@ -146,7 +147,8 @@
 
 (define (make-uds-processor [options (default-uds-ecu-options)]
                             #:erase-rounds-to-done [erase-rounds #f]
-                            #:extra-routines [extra-routines '()])
+                            #:extra-routines [extra-routines '()]
+                            #:fail-once-requests [fail-once '()])
   (uds-processor options
                  (make-semaphore 1)
                  (box uds-session-default)
@@ -161,7 +163,8 @@
                  (box (list (hasheq 'dtc #x010870 'status #x2F)))
                  (box erase-rounds)
                  (box erase-rounds)
-                 (box (apply set extra-routines))))
+                 (box (apply set extra-routines))
+                 (box (apply mutable-set fail-once))))
 
 (define (negative sid nrc)
   (uds-server-response (list #x7F sid nrc) 0))
@@ -201,6 +204,12 @@
   (cond
     [(null? request) (negative 0 #x13)]
     [(= (car request) #x7F) (negative (car request) #x12)]
+    [(and (set-member? (unbox (uds-processor-fail-once-box p)) (car request))
+          (begin
+            (set-remove! (unbox (uds-processor-fail-once-box p)) (car request))
+            #t))
+     ;; Deterministic transient failure for onFail-enforcement tests.
+     (negative (car request) #x21)]
     [else
      (case (car request)
        [(#x10) (handle-session! p request)]
@@ -555,10 +564,12 @@
                                 #:options [options #f]
                                 #:isotp-options [isotp-opts #f]
                                 #:erase-rounds-to-done [erase-rounds #f]
-                                #:extra-routines [extra-routines '()])
+                                #:extra-routines [extra-routines '()]
+                                #:fail-once-requests [fail-once '()])
   (define processor (make-uds-processor (or options (default-uds-ecu-options))
                                         #:erase-rounds-to-done erase-rounds
-                                        #:extra-routines extra-routines))
+                                        #:extra-routines extra-routines
+                                        #:fail-once-requests fail-once))
   (define ecu-port-bus (make-sim-can-port-bus (simulated-can-bus-attach bus) "sim-ecu"))
   (sim-can-port-bus-open! ecu-port-bus)
   (define endpoint
@@ -691,7 +702,8 @@
                     (uds-flash-plan-expected-identity spec)
                     (uds-flash-plan-erase-poll spec)
                     (uds-flash-plan-routine-steps spec)
-                    (uds-flash-plan-post-reset-gate spec)))
+                    (uds-flash-plan-post-reset-gate spec)
+                    (uds-flash-plan-on-fail spec)))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))])
     (flash-execute (unbox (can-uds-channel-engine-box c)) plan)))
 
@@ -712,7 +724,8 @@
                           ecu-box
                           channel-box
                           erase-rounds-to-done
-                          extra-routines)
+                          extra-routines
+                          fail-once-requests)
   #:transparent)
 
 (define (make-sim-uds-channel #:tester-to-ecu-id [tester-to-ecu-id #x7E0]
@@ -723,7 +736,8 @@
                               #:ecu-options [ecu-options #f]
                               #:data-length [data-length 8]
                               #:erase-rounds-to-done [erase-rounds #f]
-                              #:extra-routines [extra-routines '()])
+                              #:extra-routines [extra-routines '()]
+                              #:fail-once-requests [fail-once '()])
   (sim-uds-channel tester-to-ecu-id
                    ecu-to-tester-id
                    security-level
@@ -736,7 +750,8 @@
                    (box #f)
                    (box #f)
                    erase-rounds
-                   extra-routines))
+                   extra-routines
+                   fail-once))
 
 (define (sim-channel-transport c)
   "iso-tp/can (simulated)")
@@ -753,7 +768,8 @@
                                          #:options (sim-uds-channel-ecu-options c)
                                          #:isotp-options (sim-uds-channel-isotp-options c)
                                          #:erase-rounds-to-done (sim-uds-channel-erase-rounds-to-done c)
-                                         #:extra-routines (sim-uds-channel-extra-routines c)))
+                                         #:extra-routines (sim-uds-channel-extra-routines c)
+                                         #:fail-once-requests (sim-uds-channel-fail-once-requests c)))
        (set-box! (sim-uds-channel-channel-box c)
                  (make-can-uds-channel
                   (make-sim-can-port-bus (simulated-can-bus-attach (sim-uds-channel-bus c))

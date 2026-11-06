@@ -129,7 +129,7 @@
           'fingerprint fingerprint
           'expected (or expected 'null)
           'match (if expected match 'null)
-          'onFail (or (let ([of (uds-flash-hardening-on-fail hardening)])
+          'onFail (or (let ([of (uds-flash-plan-on-fail plan*)])
                         (and of (symbol->string of)))
                       'null)
           'powerGuard (if (uds-flash-hardening-power-guard hardening) 'configured 'null)
