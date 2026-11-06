@@ -89,6 +89,8 @@ racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1
 
 每条命令只输出一个 JSON 对象——camelCase 字段、稳定的命名、有界的错误文本——agent 解析输出永远不需要去刮屏幕。
 
+`flash <plan> --report <path>` 额外把这次运行落成 `flashpilot.report/v1` 证据工件：UTC 开始时间、传输、逐步审计与耗时、身份门与指纹门记录、最终结果。失败也落同样的报告——失败证据才是最要紧的证据。
+
 ## 烧录计划
 
 ```json

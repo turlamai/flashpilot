@@ -93,6 +93,8 @@ Exit codes: `0` ok · `1` flash/assert failed · `2` usage · `3` not found · `
 
 Every command prints one JSON object — camelCase fields, stable names, bounded error text — so an agent parses output without ever screen-scraping.
 
+`flash <plan> --report <path>` additionally writes the run as a `flashpilot.report/v1` evidence artifact: UTC start, transport, the audited steps with timings, the identity and fingerprint gate records, the outcome. Failed runs write the same report — the failure is the evidence that matters most.
+
 ## Flash plans
 
 ```json

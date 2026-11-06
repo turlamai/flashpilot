@@ -30,6 +30,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   (issue #30). `verify` and the bench `verify-plan` surface the configured
   expectations; `examples/plan.sim.json` gates on the simulated ECU's
   `0xFD00` "ready" DID.
+- **Flash reports** — `flashpilot flash <plan> --report <path>` writes the
+  run as a `flashpilot.report/v1` JSON evidence artifact: UTC start,
+  transport, audited steps with timings, identity/fingerprint gate records
+  and the outcome. Failed attempts write the same report; stdout JSON is
+  unchanged.
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level
