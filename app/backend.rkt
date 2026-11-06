@@ -1,7 +1,7 @@
 #lang racket/base
 
 ;; FlashPilot Studio backend — the Racket domain core serving the native
-;; shells. BenchPilot's value, rewritten on Rivet: one typed RPC surface
+;; shells. FlashPilot's value, on Rivet: one typed RPC surface
 ;; over the flashing engine, plans, readiness and evidence.
 
 (require rivet/backend
@@ -43,7 +43,7 @@
            'version "0.1.0"
            'mode "simulator"
            'transport "sim-uds"
-           'ecu "BenchPilot sim-ecu v1.0.4"
+           'ecu "FlashPilot sim-ecu v1.0.4"
            'fixtures (or (bundled-fixtures-dir) 'null)
            'ready #t)))
 

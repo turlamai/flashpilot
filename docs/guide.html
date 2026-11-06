@@ -135,7 +135,7 @@
 .\flashpilot\flashpilot.exe flash examples\plan.sim.json</div>
       <p data-i18n="g.qs-step2-out">真实输出：</p>
       <div class="out">{"bytes":30,"error":null,"fingerprint":"144252e810505c9f","ok":true,"steps":["diagnostic-session","security-access","erase","download","verify","ecu-reset"]}</div>
-      <p data-i18n="g.qs-step2-read">这条命令驱动的是真实的 ISO-TP/UDS 协议栈，对面是内置模拟 ECU（BenchPilot sim-ecu v1.0.4）。步骤名就是烧录工作流的六步审计；换到真机上，输出结构一模一样——agent 可以用同一套解析逻辑从模拟环境平滑迁到产线。</p>
+      <p data-i18n="g.qs-step2-read">这条命令驱动的是真实的 ISO-TP/UDS 协议栈，对面是内置模拟 ECU（FlashPilot sim-ecu v1.0.4）。步骤名就是烧录工作流的六步审计；换到真机上，输出结构一模一样——agent 可以用同一套解析逻辑从模拟环境平滑迁到产线。</p>
 
       <h3 data-i18n="g.qs-step3">3 · 读证据输出</h3>
       <p data-i18n="g.qs-step3-p">每条命令只在 stdout 打印一个 JSON 对象：ok 表示成败，失败时 code + 有界 error 文本说明原因，flash 成功时 fingerprint 是本次镜像的确定性指纹。详细字段见下一节。</p>
@@ -232,7 +232,7 @@ flashpilot dtc clear</div>
       <p data-i18n="g.udid-p">读取一个数据标识符（UDS 0x22 readDataByIdentifier），DID 接受 0x 前缀十六进制或十进制。responseHex 的前两字节是回显的 DID，其后是数据：</p>
       <div class="code">flashpilot udid 0xF195</div>
       <div class="out">{"ok":true,"positive":true,"responseHex":"f19542656e636850696c6f742073696d2d6563752076312e302e34"}</div>
-      <p class="muted-p" data-i18n="g.udid-note">f195 之后按 ASCII 解码即模拟 ECU 的身份串：BenchPilot sim-ecu v1.0.4。读取模拟 ECU 未定义的 DID 会得到 requestOutOfRange 否定响应（退出码 1）。</p>
+      <p class="muted-p" data-i18n="g.udid-note">f195 之后按 ASCII 解码即模拟 ECU 的身份串：FlashPilot sim-ecu v1.0.4。读取模拟 ECU 未定义的 DID 会得到 requestOutOfRange 否定响应（退出码 1）。</p>
     </section>
 
     <!-- ============ Flash plans ============ -->
@@ -290,7 +290,7 @@ flashpilot dtc clear</div>
       <p data-i18n="g.faq-a3">定位是专注、免授权费的 vFlash 替代品：无常驻进程的 CLI、确定性 JSON、声明式计划。不做整车网络仿真、没有 CAPL、不做分析窗口合集——只把「生成计划 → 校验指纹 → 带保护烧录 → 收集证据」这一个闭环诚实地做完。</p>
 
       <h3 data-i18n="g.faq-q4">模拟 ECU 是什么？</h3>
-      <p data-i18n="g.faq-a4">内置的仿真 ECU（自报身份 BenchPilot sim-ecu v1.0.4）：真实的 ISO-TP（ISO 15765-2）+ UDS（ISO 14229）协议栈后面是内存里的模拟前端，支持会话、安全访问、例程、DTC、DID 与完整烧录序列。CI 的 25 项测试与五分钟上手跑的都是它——协议行为与真机同构，只是没有总线上的物理层。</p>
+      <p data-i18n="g.faq-a4">内置的仿真 ECU（自报身份 FlashPilot sim-ecu v1.0.4）：真实的 ISO-TP（ISO 15765-2）+ UDS（ISO 14229）协议栈后面是内存里的模拟前端，支持会话、安全访问、例程、DTC、DID 与完整烧录序列。CI 的 25 项测试与五分钟上手跑的都是它——协议行为与真机同构，只是没有总线上的物理层。</p>
 
       <h3 data-i18n="g.faq-q5">怎么更新？</h3>
       <p data-i18n="g.faq-a5">v0.1.0 没有自动更新器（没有 updater，我们直说）：到 Releases 页下载新版 zip，解压覆盖旧目录即可。每个发布附 per-资产 .sha256 与汇总 SHA256SUMS。</p>
@@ -335,7 +335,7 @@ flashpilot dtc clear</div>
       'g.qs-step2-p': 'The zip carries examples/plan.sim.json plus a sample image — run it from the unpacked directory:',
       'g.qs-step2-mac': 'macOS / Linux', 'g.qs-step2-win': 'Windows',
       'g.qs-step2-out': 'Real output:',
-      'g.qs-step2-read': 'This drives the real ISO-TP/UDS stack against the built-in simulated ECU (BenchPilot sim-ecu v1.0.4). The steps array is the six-step flashing audit; on a real ECU the output shape is identical — agents parse the same JSON from the bench to the production line.',
+      'g.qs-step2-read': 'This drives the real ISO-TP/UDS stack against the built-in simulated ECU (FlashPilot sim-ecu v1.0.4). The steps array is the six-step flashing audit; on a real ECU the output shape is identical — agents parse the same JSON from the bench to the production line.',
       'g.qs-step3': '3 · Read the evidence output',
       'g.qs-step3-p': 'Every command prints exactly one JSON object on stdout: ok tells success, failures carry code plus a bounded error text, and a successful flash reports the deterministic image fingerprint. Field details in the next section.',
       'g.out-title': 'Output & exit codes',
@@ -361,7 +361,7 @@ flashpilot dtc clear</div>
       'g.request-p': 'Sends one raw UDS request (a hex byte string) for probing and scripted diagnostics. Negative answers print a readable NRC and exit 1:',
       'g.request-note': '1003 = extended diagnostic session; 0032 / 01F4 in the response are the timing parameters P2=50ms and P2*=500ms.',
       'g.udid-p': 'Reads one data identifier (UDS 0x22 readDataByIdentifier); the DID accepts 0x-prefixed hex or decimal. In responseHex the first two bytes echo the DID, the rest is data:',
-      'g.udid-note': 'Decoded as ASCII after f195, that is the simulated ECU’s identity string: BenchPilot sim-ecu v1.0.4. Reading an undefined DID yields a requestOutOfRange negative response (exit 1).',
+      'g.udid-note': 'Decoded as ASCII after f195, that is the simulated ECU’s identity string: FlashPilot sim-ecu v1.0.4. Reading an undefined DID yields a requestOutOfRange negative response (exit 1).',
       'g.plan-title': 'Writing a declarative flash plan',
       'g.plan-lede': 'One JSON document describes a complete ECU flashing transaction — the full form of examples/plan.sim.json from the repo (relative paths resolve against the plan’s directory):',
       'g.plan-field': 'Field', 'g.plan-mean': 'Meaning',
@@ -384,7 +384,7 @@ flashpilot dtc clear</div>
       'g.faq-q3': 'How does this relate to vFlash?',
       'g.faq-a3': 'The positioning is a focused, license-free vFlash alternative: a resident-free CLI, deterministic JSON, declarative plans. No vehicle-network simulation, no CAPL, no analysis-window collection — just one loop done honestly: draft a plan, verify the fingerprint, flash with guards, collect evidence.',
       'g.faq-q4': 'What is the simulated ECU?',
-      'g.faq-a4': 'A built-in simulated ECU (it identifies itself as BenchPilot sim-ecu v1.0.4): a real ISO-TP (ISO 15765-2) + UDS (ISO 14229) stack in front of an in-memory mock frontend supporting sessions, security access, routines, DTCs, DIDs and the full flashing sequence. The 25 CI tests and the five-minute start both run against it — protocol behavior is identical to a real ECU, minus the physical bus.',
+      'g.faq-a4': 'A built-in simulated ECU (it identifies itself as FlashPilot sim-ecu v1.0.4): a real ISO-TP (ISO 15765-2) + UDS (ISO 14229) stack in front of an in-memory mock frontend supporting sessions, security access, routines, DTCs, DIDs and the full flashing sequence. The 25 CI tests and the five-minute start both run against it — protocol behavior is identical to a real ECU, minus the physical bus.',
       'g.faq-q5': 'How do I update?',
       'g.faq-a5': 'v0.1.0 has no auto-updater (no updater — stated honestly): download the new zip from Releases and replace your unpacked directory. Every release ships per-asset .sha256 files and a combined SHA256SUMS.',
       'g.faq-q6': 'How do I uninstall?',
@@ -416,7 +416,7 @@ flashpilot dtc clear</div>
       'g.qs-step2-p': 'zip 里自带 examples/plan.sim.json 与示例固件，解压目录内直接执行：',
       'g.qs-step2-mac': 'macOS / Linux', 'g.qs-step2-win': 'Windows',
       'g.qs-step2-out': '真实输出：',
-      'g.qs-step2-read': '这条命令驱动的是真实的 ISO-TP/UDS 协议栈，对面是内置模拟 ECU（BenchPilot sim-ecu v1.0.4）。步骤名就是烧录工作流的六步审计；换到真机上，输出结构一模一样——agent 可以用同一套解析逻辑从模拟环境平滑迁到产线。',
+      'g.qs-step2-read': '这条命令驱动的是真实的 ISO-TP/UDS 协议栈，对面是内置模拟 ECU（FlashPilot sim-ecu v1.0.4）。步骤名就是烧录工作流的六步审计；换到真机上，输出结构一模一样——agent 可以用同一套解析逻辑从模拟环境平滑迁到产线。',
       'g.qs-step3': '3 · 读证据输出',
       'g.qs-step3-p': '每条命令只在 stdout 打印一个 JSON 对象：ok 表示成败，失败时 code + 有界 error 文本说明原因，flash 成功时 fingerprint 是本次镜像的确定性指纹。详细字段见下一节。',
       'g.out-title': '读懂输出与退出码',
@@ -442,7 +442,7 @@ flashpilot dtc clear</div>
       'g.request-p': '发一条原始 UDS 请求（十六进制字节串），适合探测与脚本化诊断。否定响应时输出 NRC（负响应码）的可读名，退出码 1：',
       'g.request-note': '1003 = 切扩展会话，响应里 0032 / 01F4 是 P2=50ms、P2*=500ms 时序参数。',
       'g.udid-p': '读取一个数据标识符（UDS 0x22 readDataByIdentifier），DID 接受 0x 前缀十六进制或十进制。responseHex 的前两字节是回显的 DID，其后是数据：',
-      'g.udid-note': 'f195 之后按 ASCII 解码即模拟 ECU 的身份串：BenchPilot sim-ecu v1.0.4。读取模拟 ECU 未定义的 DID 会得到 requestOutOfRange 否定响应（退出码 1）。',
+      'g.udid-note': 'f195 之后按 ASCII 解码即模拟 ECU 的身份串：FlashPilot sim-ecu v1.0.4。读取模拟 ECU 未定义的 DID 会得到 requestOutOfRange 否定响应（退出码 1）。',
       'g.plan-title': '声明式 flash plan 写法',
       'g.plan-lede': '一份 JSON 描述一个 ECU 的完整烧录事务。它就是仓库里 examples/plan.sim.json 的完整形态（相对路径以计划文件所在目录为基准）：',
       'g.plan-field': '字段', 'g.plan-mean': '含义',
@@ -465,7 +465,7 @@ flashpilot dtc clear</div>
       'g.faq-q3': '和 vFlash 是什么关系？',
       'g.faq-a3': '定位是专注、免授权费的 vFlash 替代品：无常驻进程的 CLI、确定性 JSON、声明式计划。不做整车网络仿真、没有 CAPL、不做分析窗口合集——只把「生成计划 → 校验指纹 → 带保护烧录 → 收集证据」这一个闭环诚实地做完。',
       'g.faq-q4': '模拟 ECU 是什么？',
-      'g.faq-a4': '内置的仿真 ECU（自报身份 BenchPilot sim-ecu v1.0.4）：真实的 ISO-TP（ISO 15765-2）+ UDS（ISO 14229）协议栈后面是内存里的模拟前端，支持会话、安全访问、例程、DTC、DID 与完整烧录序列。CI 的 25 项测试与五分钟上手跑的都是它——协议行为与真机同构，只是没有总线上的物理层。',
+      'g.faq-a4': '内置的仿真 ECU（自报身份 FlashPilot sim-ecu v1.0.4）：真实的 ISO-TP（ISO 15765-2）+ UDS（ISO 14229）协议栈后面是内存里的模拟前端，支持会话、安全访问、例程、DTC、DID 与完整烧录序列。CI 的 25 项测试与五分钟上手跑的都是它——协议行为与真机同构，只是没有总线上的物理层。',
       'g.faq-q5': '怎么更新？',
       'g.faq-a5': 'v0.1.0 没有自动更新器（没有 updater，我们直说）：到 Releases 页下载新版 zip，解压覆盖旧目录即可。每个发布附 per-资产 .sha256 与汇总 SHA256SUMS。',
       'g.faq-q6': '怎么卸载？',

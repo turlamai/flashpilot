@@ -1,7 +1,7 @@
 #lang racket/base
 
 ;; PcanBus.cs port: PEAK PCAN-Basic transport (Windows). Requires the vendor
-;; driver and PCANBasic.dll next to the runtime (BenchPilot never
+;; driver and PCANBasic.dll next to the runtime (FlashPilot never
 ;; redistributes vendor binaries). One channel, pumped receive, classic CAN
 ;; frames.
 ;;

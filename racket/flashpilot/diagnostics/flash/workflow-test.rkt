@@ -39,7 +39,7 @@
     ;; F195 echoes DID bytes then the ASCII version string.
     (check-true (string-prefix? payload-hex "f195"))
     (check-true (string-contains? (bytes->string/utf-8 (list->bytes (drop (hex-parse payload-hex) 2)))
-                                  "BenchPilot sim-ecu")))
+                                  "FlashPilot sim-ecu")))
 
   (test-case "unsupported DID reports requestOutOfRange"
     (define channel (make-sim-uds-channel))

@@ -98,7 +98,7 @@
    3
    #x1234
    (lambda (seed) (map (lambda (b) (bitwise-xor b #x5A)) seed))
-   (make-hash (list (cons #xF195 (bytes->list (string->bytes/utf-8 "BenchPilot sim-ecu v1.0.4")))
+   (make-hash (list (cons #xF195 (bytes->list (string->bytes/utf-8 "FlashPilot sim-ecu v1.0.4")))
                     (cons #xF186 (list uds-session-default))
                     (cons #xFD00 (bytes->list (string->bytes/utf-8 "ready")))))
    (mutable-set #xFD00)))

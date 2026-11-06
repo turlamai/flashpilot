@@ -2,7 +2,7 @@
 
 ;; Security Provider abstraction: vendor seed-key algorithms beyond the
 ;; registered derivers plug in as external commands. A provider is named
-;; `command:<id>` in driver settings; BenchPilot runs
+;; `command:<id>` in driver settings; FlashPilot runs
 ;;   <executable> <args...> --seed <hex>
 ;; and parses the stdout as the key hex. Vendor code stays in the vendor's
 ;; own binary — Core only sees bytes.
