@@ -97,6 +97,27 @@
     (check-exn exn:benchpilot:validation?
                (lambda () (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":1,\"record\":\"abc\"}]}"))))
 
+  (test-case "postResetGate parses did/value/timeout/interval"
+    (define gate
+      (uds-flash-plan-post-reset-gate
+       (parse "{\"postResetGate\":{\"did\":\"0xFD00\",\"value\":\"ready\",\"timeoutMs\":30000,\"intervalMs\":250}}")))
+    (check-equal? (post-reset-gate-did gate) #xFD00)
+    (check-equal? (post-reset-gate-value gate) (bytes->list (string->bytes/utf-8 "ready")))
+    (check-equal? (post-reset-gate-timeout-ms gate) 30000)
+    (check-equal? (post-reset-gate-interval-ms gate) 250))
+
+  (test-case "postResetGate defaults interval and rejects bad fields"
+    (define gate
+      (uds-flash-plan-post-reset-gate
+       (parse "{\"postResetGate\":{\"did\":65280,\"valueHex\":\"7265616479\",\"timeoutMs\":1000}}")))
+    (check-equal? (post-reset-gate-interval-ms gate) 500)
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"postResetGate\":{\"did\":1,\"value\":\"a\",\"valueHex\":\"00\",\"timeoutMs\":100}}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"postResetGate\":{\"did\":1,\"value\":\"a\"}}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"postResetGate\":{\"did\":1,\"value\":\"a\",\"timeoutMs\":0}}"))))
+
   (test-case "erasePoll rejects out-of-range or missing fields"
     (define (parse-erase json) (parse json))
     (check-exn exn:benchpilot:validation?

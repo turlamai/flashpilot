@@ -114,6 +114,7 @@ Every command prints one JSON object — camelCase fields, stable names, bounded
 - `expectedIdentity` — ECU identification gate: DIDs are read and compared byte-exact as the first flash step; a wrong target is never touched.
 - `erasePoll` — polled erase for slice-erase ECUs: repeat the erase routine until a status byte reports done (`statusByte`/`maxRounds`/`roundTimeoutMs`), abort honestly on exhaustion.
 - `routineSteps` — vendor routine calls at fixed sequence points (`before-erase`, `after-verify`): prechecks and activations as declarative plan entries, positive response required, raw bytes audited.
+- `postResetGate` — after EcuReset, poll a DID until its bytes match; the ECU must prove it came back healthy before the run reports success.
 - `expectedFingerprint` — pins the image; mismatch is rejected before any driver call.
 
 Segments take inline hex (`data`) or raw `.bin` files (`file`), resolved relative to the plan's directory. Intel HEX / S-record parsing ships in the image model; plan-level wiring for `.hex`/`.s19` files is coming. Seed-key algorithms beyond the built-ins plug in as external commands: `"keyDeriver": "command:./my-oem-algo"`.

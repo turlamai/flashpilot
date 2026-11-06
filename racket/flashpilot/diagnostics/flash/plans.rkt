@@ -22,6 +22,7 @@
          (struct-out identity-check)
          (struct-out erase-poll)
          (struct-out routine-step)
+         (struct-out post-reset-gate)
          (struct-out flash-power-guard)
          (struct-out uds-flash-hardening)
          uds-flash-hardening-plan
@@ -45,7 +46,8 @@
                   p2-star-timeout-ms
                   expected-identity
                   erase-poll
-                  routine-steps)
+                  routine-steps
+                  post-reset-gate)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -106,6 +108,51 @@
                (or (not (exact-integer? timeout-raw)) (not (> timeout-raw 0))))
       (raise-validation "routineSteps timeoutMs must be an integer > 0."))
     (routine-step (string->symbol at-raw) routine-id record timeout-raw)))
+
+;; Post-reset confirmation gate: after EcuReset the engine polls one DID
+;; until its exact bytes match — the ECU must prove it came back healthy
+;; on the new image before the run reports success. Same value semantics
+;; as expectedIdentity (exactly one of value / valueHex).
+(struct post-reset-gate (did value timeout-ms interval-ms) #:transparent)
+
+(define (parse-post-reset-gate raw)
+  (unless (hash? raw)
+    (raise-validation "Flash plan postResetGate must be an object."))
+  (define did-raw (hash-ref raw 'did #f))
+  (define did
+    (cond
+      [(exact-integer? did-raw) did-raw]
+      [(and (string? did-raw) (string-prefix? (string-downcase did-raw) "0x"))
+       (string->number (substring did-raw 2) 16)]
+      [else #f]))
+  (unless (and did (exact-integer? did) (<= 0 did #xFFFF))
+    (raise-validation
+     (format "Invalid postResetGate DID '~a' (use 0x0000..0xFFFF)." did-raw)))
+  (define did-hex (~r did #:base 16))
+  (define value-raw (hash-ref raw 'value #f))
+  (define hex-raw (hash-ref raw 'valueHex #f))
+  (define value
+    (cond
+      [(and value-raw hex-raw)
+       (raise-validation
+        (format "postResetGate DID 0x~a sets both value and valueHex." did-hex))]
+      [(string? value-raw)
+       (when (zero? (string-length value-raw))
+         (raise-validation
+          (format "postResetGate DID 0x~a has an empty value." did-hex)))
+       (bytes->list (string->bytes/utf-8 value-raw))]
+      [(string? hex-raw) (hex-parse hex-raw)]
+      [else
+       (raise-validation
+        (format "postResetGate DID 0x~a needs value (UTF-8) or valueHex (hex)." did-hex))]))
+  (define timeout-ms (hash-ref raw 'timeoutMs #f))
+  (unless (and (exact-integer? timeout-ms) (> timeout-ms 0))
+    (raise-validation "postResetGate timeoutMs must be an integer > 0."))
+  (define interval-raw (hash-ref raw 'intervalMs #f))
+  (define interval-ms (or interval-raw 500))
+  (unless (and (exact-integer? interval-ms) (> interval-ms 0))
+    (raise-validation "postResetGate intervalMs must be an integer > 0."))
+  (post-reset-gate did value timeout-ms interval-ms))
 
 ;; Shared JSON shape for configured identity gates (CLI verify, bench RPC).
 (define (identity-json checks)
@@ -256,7 +303,9 @@
                     (let ([raw (hash-ref doc 'erasePoll #f)])
                       (and raw (parse-erase-poll raw)))
                     (let ([raw (hash-ref doc 'routineSteps #f)])
-                      (if raw (parse-routine-steps raw) '()))))
+                      (if raw (parse-routine-steps raw) '()))
+                    (let ([raw (hash-ref doc 'postResetGate #f)])
+                      (and raw (parse-post-reset-gate raw)))))
   (define on-fail-raw (hash-ref doc 'onFail #f))
   (define on-fail
     (cond

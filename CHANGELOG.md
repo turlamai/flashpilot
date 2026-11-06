@@ -49,6 +49,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   semantics are never interpreted. The simulated ECU accepts an opt-in
   `extra-routines` set, staying strict (requestOutOfRange) otherwise
   (issue #36).
+- **Post-reset confirmation gate** — plans accept `postResetGate`
+  (`did` + exact-byte `value`/`valueHex` + `timeoutMs`/`intervalMs`):
+  after EcuReset the engine polls the DID until it matches, so a stuck
+  ECU cannot yield a green run; timeout aborts with the last value read
+  as bounded evidence (issue #38). On transports where a reset drops the
+  link the gate requires channel re-establishment — the simulated
+  channel provides it today; general DoIP reconnection ships with the
+  DoIP hardening slice.
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level
