@@ -19,7 +19,7 @@ AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使�
 
 FlashPilot 就是围绕这个闭环构建的。
 
-- **声明式烧录计划** —— 每个 ECU 一份 JSON 文档：段（inline、BIN、Intel HEX、S-record）、会话、带可插拔 key provider 的 security access、erase/download/verify 流程、时序、恢复策略、电源保护、期望指纹。
+- **声明式烧录计划** —— 每个 ECU 一份 JSON 文档：段（inline、BIN、Intel HEX、S-record）、会话、带可插拔 key provider 的 security access、erase/download/verify 流程、时序、恢复策略、电源保护、ECU 身份门、期望指纹。
 - **真实传输层** —— SocketCAN（Linux）、PEAK PCAN（Windows）、DoIP（以太网）。底层是 ISO-TP（ISO 15765-2）；LIN 在计划中。
 - **Agent 优先的 CLI** —— 确定性 JSON 输出、永不撒谎的退出码，以及失败证据（有界、带指纹、可审计），让 agent 无需人类打开厂商工具就能诊断并重试。
 - **默认安全** —— 计划在任何驱动调用之前校验期望指纹；编程中的电源保护在电流越界时中止；破坏性操作会明说。
@@ -98,12 +98,14 @@ racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1
   "keyDeriver": "xor0x5a",
   "onFail": "resetAndRetry",
   "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200 },
+  "expectedIdentity": [{ "did": "0xFD00", "value": "ready" }],
   "expectedFingerprint": "e3400821709d3e50"
 }
 ```
 
 - `onFail` —— `retry` 或 `resetAndRetry`（尽力复位 ECU，然后重试一次）。
 - `powerGuard` —— 编程期间轮询台架电源；电流越界即断电中止。
+- `expectedIdentity` —— ECU 身份门：刷前逐条读 DID 并做字节级精确比对，目标不对就拒绝触碰。
 - `expectedFingerprint` —— 锁定镜像；不匹配在任何驱动调用之前就被拒绝。
 
 段支持内联十六进制（`data`）或原始 `.bin` 文件（`file`），相对计划文件目录解析。Intel HEX / S-record 解析已在镜像模型层就绪；计划段直接引用 `.hex`/`.s19` 的接线在后续版本开放。内置算法之外的 seed-key 算法以外部命令接入：`"keyDeriver": "command:./my-oem-algo"`。

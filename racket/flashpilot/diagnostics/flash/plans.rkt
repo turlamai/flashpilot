@@ -3,8 +3,9 @@
 ;; Declarative flash plans: the portable, AI-authorable artifact at the
 ;; center of FlashPilot. A plan describes one complete UDS flashing
 ;; transaction — memory segments, session, security access, erase/verify
-;; routines, transport timings — plus hardening options (recovery
-;; strategy, in-programming power guard) and the image fingerprint gate.
+;; routines, transport timings, the expectedIdentity ECU gate — plus
+;; hardening options (recovery strategy, in-programming power guard) and
+;; the image fingerprint gate.
 
 (require json
          racket/file
@@ -18,6 +19,7 @@
 
 (provide (struct-out uds-flash-plan)
          (struct-out uds-flash-segment)
+         (struct-out identity-check)
          (struct-out flash-power-guard)
          (struct-out uds-flash-hardening)
          uds-flash-hardening-plan
@@ -25,6 +27,7 @@
          uds-flash-hardening-power-guard
          uds-flash-hardening-expected-fingerprint
          flash-plan-fingerprint
+         identity-json
          read-flash-plan-json
          read-segment-file)
 
@@ -37,9 +40,21 @@
                   verify-routine-id
                   block-retries
                   p2-timeout-ms
-                  p2-star-timeout-ms)
+                  p2-star-timeout-ms
+                  expected-identity)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
+
+;; One ECU identification gate entry: the DID to read (22 XX XX) and the
+;; exact byte sequence the positive response must carry after the echoed
+;; DID bytes.
+(struct identity-check (did value) #:transparent)
+
+;; Shared JSON shape for configured identity gates (CLI verify, bench RPC).
+(define (identity-json checks)
+  (for/list ([c (in-list checks)])
+    (hasheq 'did (identity-check-did c)
+            'valueHex (bytes->hex (identity-check-value c)))))
 
 (struct flash-power-guard (min-ma max-ma poll-ms) #:transparent)
 (struct uds-flash-hardening (plan on-fail power-guard expected-fingerprint data-length)
@@ -67,8 +82,48 @@
   (substring (~r (unbox h-box) #:base 16 #:min-width 16 #:pad-string "0") 0 16))
 
 ;; Parses a plan JSON document into plan + hardening. The plan struct is
-;; the engine-facing part; hardening carries onFail / powerGuard /
+;; the engine-facing part (including the expectedIdentity gate the engine
+;; enforces at runtime); hardening carries onFail / powerGuard /
 ;; expectedFingerprint.
+
+;; expectedIdentity entries: { did, value (UTF-8) | valueHex }. Exactly one
+;; value form per entry; DID is 16-bit; empty expectations are rejected —
+;; an empty byte sequence can never be what an author means.
+(define (parse-identity-entries raw)
+  (unless (list? raw)
+    (raise-validation "Flash plan expectedIdentity must be a list."))
+  (for/list ([entry (in-list raw)])
+    (unless (hash? entry)
+      (raise-validation "Invalid expectedIdentity entry: expected an object."))
+    (define did-raw (hash-ref entry 'did #f))
+    (define did
+      (cond
+        [(exact-integer? did-raw) did-raw]
+        [(and (string? did-raw) (string-prefix? (string-downcase did-raw) "0x"))
+         (string->number (substring did-raw 2) 16)]
+        [else #f]))
+    (unless (and did (exact-integer? did) (<= 0 did #xFFFF))
+      (raise-validation
+       (format "Invalid expectedIdentity DID '~a' (use 0x0000..0xFFFF)." did-raw)))
+    (define did-hex (~r did #:base 16))
+    (define value-raw (hash-ref entry 'value #f))
+    (define hex-raw (hash-ref entry 'valueHex #f))
+    (define value
+      (cond
+        [(and value-raw hex-raw)
+         (raise-validation
+          (format "expectedIdentity DID 0x~a sets both value and valueHex." did-hex))]
+        [(string? value-raw)
+         (when (zero? (string-length value-raw))
+           (raise-validation
+            (format "expectedIdentity DID 0x~a has an empty value." did-hex)))
+         (bytes->list (string->bytes/utf-8 value-raw))]
+        [(string? hex-raw) (hex-parse hex-raw)]
+        [else
+         (raise-validation
+          (format "expectedIdentity DID 0x~a needs value (UTF-8) or valueHex (hex)." did-hex))]))
+    (identity-check did value)))
+
 (define (read-flash-plan-json text)
   (define doc
     (with-handlers ([exn:fail? (lambda (e)
@@ -115,7 +170,9 @@
                     (or (hash-ref doc 'verifyRoutineId #f) #xFF01)
                     (or (hash-ref doc 'blockRetries #f) 0)
                     (or (hash-ref doc 'p2TimeoutMs #f) 1000)
-                    (or (hash-ref doc 'p2StarTimeoutMs #f) 10000)))
+                    (or (hash-ref doc 'p2StarTimeoutMs #f) 10000)
+                    (let ([raw (hash-ref doc 'expectedIdentity #f)])
+                      (if raw (parse-identity-entries raw) '()))))
   (define on-fail-raw (hash-ref doc 'onFail #f))
   (define on-fail
     (cond

@@ -3,7 +3,7 @@
 ;; Firmware image model: Intel HEX and Motorola S-record files parse into
 ;; address/data segments, so one declarative flash plan can flash a
 ;; multi-region image the same way it flashes inline hex data. BIN stays
-;; explicit-address by design (BenchPilot never guesses flash addresses).
+;; explicit-address by design (FlashPilot never guesses flash addresses).
 
 (require racket/format
          racket/list

@@ -1,8 +1,9 @@
 #lang racket/base
 
-;; Crc32 + UdsFlashEngine.cs port: session -> security access -> erase ->
-;; per-segment download (RequestDownload/TransferData/Exit with retries) ->
-;; CRC32 verify routine -> ECU reset, every step audited.
+;; Crc32 + UdsFlashEngine.cs port: expectedIdentity gate -> session ->
+;; security access -> erase -> per-segment download (RequestDownload/
+;; TransferData/Exit with retries) -> CRC32 verify routine -> ECU reset,
+;; every step audited.
 
 (require racket/contract
          racket/format
@@ -126,6 +127,40 @@
                                                               (elapsed-ms)
                                                               (reverse steps)
                                                               (exn-message e)))))])
+    ;; 0. ECU identification gate: read every configured DID and compare
+    ;; exact bytes while the ECU still sits in whatever session it powered
+    ;; up in — a wrong target aborts before session, unlock or erase ever
+    ;; happen.
+    (when (pair? (uds-flash-plan-expected-identity plan))
+      (let ([sw (now-millis)])
+        (for ([chk (in-list (uds-flash-plan-expected-identity plan))])
+          (define did-hex (hex-up (identity-check-did chk) 4))
+          (define payload
+            (with-handlers
+                ([exn:fail:uds?
+                  (lambda (e)
+                    (fail! (format "ECU identity DID 0x~a read failed: ~a"
+                                   did-hex (exn-message e))
+                           (and (exn:fail:uds-nrc e)
+                                (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))])
+              (uds-require-positive client
+                                    (uds-read-did (identity-check-did chk))
+                                    #:timing (engine-timing plan)
+                                    #:cancel cancel)))
+          ;; Positive response payload: echoed DID bytes then the value.
+          (define actual (if (>= (length payload) 2) (drop payload 2) '()))
+          (unless (equal? actual (identity-check-value chk))
+            (fail! (format "ECU identity DID 0x~a mismatch: expected ~a, got ~a."
+                           did-hex
+                           (truncate-hex (identity-check-value chk))
+                           (truncate-hex actual)))))
+        (add-step! (flash-step-summary
+                    "identity"
+                    #t
+                    (format "~a identity DID(s) matched."
+                            (length (uds-flash-plan-expected-identity plan)))
+                    (/ (- (now-millis) sw) 1.0)
+                    #f))))
 
     ;; 1. Diagnostic session control.
     (let ([sw (now-millis)])

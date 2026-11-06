@@ -27,7 +27,11 @@
                     #xFF01
                     0
                     1000
-                    10000))
+                    10000
+                    '()))
+
+  (define (identity-plan-for image checks)
+    (struct-copy uds-flash-plan (flash-plan-for image) [expected-identity checks]))
 
   (test-case "UDS read DID answers through the real ISO-TP stack"
     (define channel (make-sim-uds-channel))
@@ -39,7 +43,7 @@
     ;; F195 echoes DID bytes then the ASCII version string.
     (check-true (string-prefix? payload-hex "f195"))
     (check-true (string-contains? (bytes->string/utf-8 (list->bytes (drop (hex-parse payload-hex) 2)))
-                                  "BenchPilot sim-ecu")))
+                                  "FlashPilot sim-ecu")))
 
   (test-case "unsupported DID reports requestOutOfRange"
     (define channel (make-sim-uds-channel))
@@ -89,4 +93,65 @@
              (uds-flash-result-steps result)))
     (check-not-false abort)
     (check-true (string-contains? (flash-step-summary-detail abort) "securityAccessDenied")))
+
+  (test-case "identity gate passes and runs before the session step"
+    (define channel (make-sim-uds-channel))
+    (define result
+      (sim-channel-flash
+       channel
+       (identity-plan-for test-image
+                          (list (identity-check
+                                 #xF195
+                                 (bytes->list (string->bytes/utf-8 "FlashPilot sim-ecu v1.0.4")))
+                                (identity-check #xFD00 (bytes->list (string->bytes/utf-8 "ready")))))))
+    (check-true (uds-flash-result-ok result))
+    (check-equal? (map flash-step-summary-step (uds-flash-result-steps result))
+                  '("identity" "diagnostic-session" "security-access" "erase" "download"
+                    "verify" "ecu-reset")))
+
+  (test-case "identity mismatch aborts before the session changes"
+    (define channel (make-sim-uds-channel))
+    (define result
+      (sim-channel-flash
+       channel
+       (identity-plan-for test-image
+                          (list (identity-check #xF195
+                                                (bytes->list (string->bytes/utf-8 "wrong-ecu")))))))
+    (check-false (uds-flash-result-ok result))
+    ;; Convention for every gate failure: only the abort step is appended;
+    ;; its detail names the failing step and DID.
+    (check-equal? (map flash-step-summary-step (uds-flash-result-steps result))
+                  '("abort"))
+    (define abort-step (findf (lambda (s) (string=? (flash-step-summary-step s) "abort"))
+                              (uds-flash-result-steps result)))
+    (check-true (string-contains? (flash-step-summary-detail abort-step) "identity DID 0xF195"))
+    (check-true (string-contains? (flash-step-summary-detail abort-step) "mismatch"))
+    (define processor (simulated-uds-ecu-processor (unbox (sim-uds-channel-ecu-box channel))))
+    ;; Default session, nothing unlocked, erased or downloaded — the ECU
+    ;; was never modified.
+    (check-equal? (unbox (uds-processor-session-box processor)) uds-session-default)
+    (check-equal? (uds-processor-erase-count processor) 0)
+    (check-equal? (uds-processor-received-image processor) '()))
+
+  (test-case "identity gate aborts on an unsupported DID with the NRC named"
+    (define channel (make-sim-uds-channel))
+    (define result
+      (sim-channel-flash
+       channel
+       (identity-plan-for test-image (list (identity-check #x1234 (list #x01))))))
+    (check-false (uds-flash-result-ok result))
+    (define abort (findf (lambda (s) (string=? (flash-step-summary-step s) "abort"))
+                         (uds-flash-result-steps result)))
+    (check-not-false abort)
+    (check-true (string-contains? (flash-step-summary-detail abort) "1234"))
+    (check-true (string-contains? (flash-step-summary-detail abort) "requestOutOfRange")))
+
+  (test-case "identity gate accepts hex-encoded values"
+    (define channel (make-sim-uds-channel))
+    (define result
+      (sim-channel-flash
+       channel
+       (identity-plan-for test-image
+                          (list (identity-check #xFD00 (hex-parse "72 65 61 64 79"))))))
+    (check-true (uds-flash-result-ok result)))
 )
