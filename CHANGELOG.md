@@ -57,6 +57,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   link the gate requires channel re-establishment — the simulated
   channel provides it today; general DoIP reconnection ships with the
   DoIP hardening slice.
+- **onFail enforced** — the parsed-but-not-enforced debt is settled:
+  `retry` replays the whole transaction once after a non-permanent
+  failure and `resetAndRetry` adds a best-effort hard EcuReset before
+  the replay; both leave the failed attempt's abort, a `recovery` step
+  and the replayed sequence in the audit. Permanent failures (wrong
+  ECU at the identity gate) never replay. `onFail` moved onto the
+  engine-facing plan record; `powerGuard` remains the one documented
+  parsed-not-enforced field (issue #40).
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level

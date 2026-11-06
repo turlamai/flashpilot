@@ -26,7 +26,6 @@
          (struct-out flash-power-guard)
          (struct-out uds-flash-hardening)
          uds-flash-hardening-plan
-         uds-flash-hardening-on-fail
          uds-flash-hardening-power-guard
          uds-flash-hardening-expected-fingerprint
          flash-plan-fingerprint
@@ -47,7 +46,8 @@
                   expected-identity
                   erase-poll
                   routine-steps
-                  post-reset-gate)
+                  post-reset-gate
+                  on-fail)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -161,7 +161,7 @@
             'valueHex (bytes->hex (identity-check-value c)))))
 
 (struct flash-power-guard (min-ma max-ma poll-ms) #:transparent)
-(struct uds-flash-hardening (plan on-fail power-guard expected-fingerprint data-length)
+(struct uds-flash-hardening (plan power-guard expected-fingerprint data-length)
   #:transparent)
 
 ;; Deterministic FNV-1a over addresses + lengths + data, in plan order.
@@ -287,6 +287,15 @@
                [else #f]))
            (hash-ref seg 'file #f)))
         '()))
+  (define on-fail-raw (hash-ref doc 'onFail #f))
+  (define on-fail
+    (cond
+      [(not on-fail-raw) #f]
+      [(member on-fail-raw '("retry" "resetAndRetry") string-ci=?)
+       => (lambda (m) (string->symbol (first m)))]
+      [else
+       (raise-validation
+        (format "Flash plan onFail must be 'retry' or 'resetAndRetry' (got '~a')." on-fail-raw))]))
   (define plan
     (uds-flash-plan segments
                     (or (hash-ref doc 'maxBlockPayload #f) 1024)
@@ -305,16 +314,8 @@
                     (let ([raw (hash-ref doc 'routineSteps #f)])
                       (if raw (parse-routine-steps raw) '()))
                     (let ([raw (hash-ref doc 'postResetGate #f)])
-                      (and raw (parse-post-reset-gate raw)))))
-  (define on-fail-raw (hash-ref doc 'onFail #f))
-  (define on-fail
-    (cond
-      [(not on-fail-raw) #f]
-      [(member on-fail-raw '("retry" "resetAndRetry") string-ci=?)
-       => (lambda (m) (string->symbol (first m)))]
-      [else
-       (raise-validation
-        (format "Flash plan onFail must be 'retry' or 'resetAndRetry' (got '~a')." on-fail-raw))]))
+                      (and raw (parse-post-reset-gate raw)))
+                    on-fail))
   (define guard-raw (hash-ref doc 'powerGuard #f))
   (define power-guard
     (and guard-raw
@@ -330,7 +331,7 @@
   (define data-length
     (let ([v (hash-ref doc 'dataLength #f)])
       (if v (can-fd-next-dlen v) classic-data-length)))
-  (uds-flash-hardening plan on-fail power-guard
+  (uds-flash-hardening plan power-guard
                        (hash-ref doc 'expectedFingerprint #f) data-length))
 
 (define (read-segment-file file base-directory)
