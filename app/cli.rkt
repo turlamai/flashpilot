@@ -16,6 +16,7 @@
          flashpilot/diagnostics/doip/doip
          flashpilot/diagnostics/flash/odx
          flashpilot/diagnostics/flash/plans
+         flashpilot/diagnostics/flash/report
          flashpilot/diagnostics/flash/validation
          flashpilot/diagnostics/channels/lin-uds-channel
          flashpilot/diagnostics/support-matrix
@@ -90,6 +91,11 @@
       (sim-channel-flash ch plan)
       (can-uds-channel-flash ch plan)))
 
+(define (transport-label ch)
+  (if (sim-uds-channel? ch)
+      (sim-channel-transport ch)
+      (channel-transport ch)))
+
 ;; ----------------------------------------------------------------------------
 ;; Usage
 ;; ----------------------------------------------------------------------------
@@ -112,6 +118,7 @@
     "Options:\n"
     "  --transport doip --host H [--port N]  DoIP transport (default sim ECU)\n"
     "  --transport lin                       simulated LIN (UDS over LIN)\n"
+    "  --report <path>                       write a flash report (JSON evidence artifact, failed runs included)\n"
     "\n"
     "Exit codes: 0 ok · 1 flash/assert failed · 2 usage · 3 not found · 4 transport\n")))
 
@@ -151,7 +158,17 @@
                   fingerprint expected)
           1))
   (define channel (make-channel args #:data-length (uds-flash-hardening-data-length hardening)))
+  ;; The report context is captured before the engine touches the ECU;
+  ;; failed attempts write the same report — the failure is the evidence
+  ;; that matters most. Pre-flight failures (plan/fingerprint) never reach
+  ;; transport, so they print their JSON and write no report.
+  (define report-ctx
+    (and (hash-ref args 'report #f)
+         (make-flash-report-context plan-path (transport-label channel))))
   (define result (channel-flash channel plan*))
+  (when report-ctx
+    (write-flash-report (hash-ref args 'report)
+                        (flash-report->jsexpr report-ctx hardening plan* result)))
   (print-result (hasheq 'ok (uds-flash-result-ok result)
                         'bytes (uds-flash-result-total-bytes result)
                         'fingerprint fingerprint
