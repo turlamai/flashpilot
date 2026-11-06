@@ -30,7 +30,8 @@
                     10000
                     '()
                     #f
-                    '()))
+                    '()
+                    #f))
 
   (define (identity-plan-for image checks)
     (struct-copy uds-flash-plan (flash-plan-for image) [expected-identity checks]))
@@ -221,4 +222,38 @@
     ;; Nothing was erased — the precheck gate stopped the sequence.
     (define processor (simulated-uds-ecu-processor (unbox (sim-uds-channel-ecu-box channel))))
     (check-equal? (uds-processor-erase-count processor) 0))
+
+  (test-case "post-reset gate passes when the DID matches"
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [post-reset-gate
+                    (post-reset-gate #xFD00
+                                     (bytes->list (string->bytes/utf-8 "ready"))
+                                     5000
+                                     50)]))
+    (define result (sim-channel-flash channel plan))
+    (check-true (uds-flash-result-ok result))
+    (check-equal? (map flash-step-summary-step (uds-flash-result-steps result))
+                  '("diagnostic-session" "security-access" "erase" "download" "verify"
+                    "ecu-reset" "post-reset-gate")))
+
+  (test-case "post-reset gate aborts when the value never matches"
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [post-reset-gate
+                    (post-reset-gate #xFD00
+                                     (bytes->list (string->bytes/utf-8 "not-ready"))
+                                     600
+                                     100)]))
+    (define result (sim-channel-flash channel plan))
+    (check-false (uds-flash-result-ok result))
+    (define abort (findf (lambda (s) (string=? (flash-step-summary-step s) "abort"))
+                         (uds-flash-result-steps result)))
+    (check-not-false abort)
+    (check-true (string-contains? (flash-step-summary-detail abort)
+                                  "never matched within 600 ms"))
+    (check-true (string-contains? (flash-step-summary-detail abort) "7265616479")))
 )
+

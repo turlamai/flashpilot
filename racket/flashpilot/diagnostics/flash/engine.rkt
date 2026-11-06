@@ -404,6 +404,49 @@
       (add-step!
        (flash-step-summary "ecu-reset" #t "hard reset accepted." (/ (- (now-millis) sw) 1.0) #f)))
 
+    ;; 7. Post-reset confirmation gate (optional): poll one DID until its
+    ;; exact bytes match — the ECU must prove it came back healthy on the
+    ;; new image before this run reports success.
+    (define gate (uds-flash-plan-post-reset-gate plan))
+    (when gate
+      (let ([sw (now-millis)]
+            [deadline (+ (now-millis) (post-reset-gate-timeout-ms gate))]
+            [last-payload #f])
+        (let poll ()
+          (sleep (/ (post-reset-gate-interval-ms gate) 1000.0))
+          (define read-result
+            (with-handlers
+                ([exn:fail:uds?
+                  (lambda (e)
+                    (fail! (format "Post-reset gate DID 0x~a read failed: ~a"
+                                   (hex-up (post-reset-gate-did gate) 4)
+                                   (exn-message e))
+                           (and (exn:fail:uds-nrc e)
+                                (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))])
+              (uds-require-positive client
+                                    (uds-read-did (post-reset-gate-did gate))
+                                    #:timing (engine-timing plan)
+                                    #:cancel cancel)))
+          (set! last-payload
+                (if (>= (length read-result) 2) (drop read-result 2) '()))
+          (cond
+            [(equal? last-payload (post-reset-gate-value gate))
+             (add-step!
+              (flash-step-summary
+               "post-reset-gate"
+               #t
+               (format "DID 0x~a matched after ~a ms."
+                       (hex-up (post-reset-gate-did gate) 4)
+                       (inexact->exact (floor (- (now-millis) sw))))
+               (/ (- (now-millis) sw) 1.0)
+               #f))]
+            [(> (now-millis) deadline)
+             (fail! (format "Post-reset gate DID 0x~a never matched within ~a ms (last value ~a)."
+                            (hex-up (post-reset-gate-did gate) 4)
+                            (post-reset-gate-timeout-ms gate)
+                            (truncate-hex last-payload)))]
+            [else (poll)]))))
+
     (uds-flash-result #t
                       (length (uds-flash-plan-segments plan))
                       total-bytes
