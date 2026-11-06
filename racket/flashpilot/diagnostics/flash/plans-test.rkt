@@ -74,6 +74,29 @@
                     (parse "{\"erasePoll\":{\"statusByte\":85,\"maxRounds\":1,\"roundTimeoutMs\":10}}")))
                   85))
 
+  (test-case "routineSteps parse at/id/record/timeout"
+    (define steps
+      (uds-flash-plan-routine-steps
+       (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":\"0x0301\",\"record\":\"00112233\",\"timeoutMs\":25000},{\"at\":\"after-verify\",\"routineId\":771}]}")))
+    (check-equal? (length steps) 2)
+    (check-equal? (routine-step-at (first steps)) 'before-erase)
+    (check-equal? (routine-step-routine-id (first steps)) #x0301)
+    (check-equal? (routine-step-record (first steps)) '(0 #x11 #x22 #x33))
+    (check-equal? (routine-step-timeout-ms (first steps)) 25000)
+    (check-equal? (routine-step-at (second steps)) 'after-verify)
+    (check-equal? (routine-step-record (second steps)) '())
+    (check-false (routine-step-timeout-ms (second steps))))
+
+  (test-case "routineSteps reject bad position, id and timeout"
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"routineSteps\":[{\"at\":\"mid-verify\",\"routineId\":1}]}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":65536}]}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":1,\"timeoutMs\":0}]}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":1,\"record\":\"abc\"}]}"))))
+
   (test-case "erasePoll rejects out-of-range or missing fields"
     (define (parse-erase json) (parse json))
     (check-exn exn:benchpilot:validation?

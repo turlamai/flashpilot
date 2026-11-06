@@ -42,6 +42,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   exhausted. Unset plans keep the historical single-shot erase. The
   simulated ECU gains an opt-in `erase-rounds-to-done` mode so the loop
   and its exhaustion path are CI-proven (issue #34).
+- **Generic routine steps** — plans accept `routineSteps` entries at
+  `before-erase` / `after-verify` (optional `record`, `timeoutMs`): the
+  declarative answer to vendor prechecks and activations. The engine
+  requires a positive response and audits the raw bytes; vendor status
+  semantics are never interpreted. The simulated ECU accepts an opt-in
+  `extra-routines` set, staying strict (requestOutOfRange) otherwise
+  (issue #36).
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level

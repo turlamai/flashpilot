@@ -29,7 +29,8 @@
                     1000
                     10000
                     '()
-                    #f))
+                    #f
+                    '()))
 
   (define (identity-plan-for image checks)
     (struct-copy uds-flash-plan (flash-plan-for image) [expected-identity checks]))
@@ -186,4 +187,38 @@
     (check-equal? (uds-processor-erase-count processor) 4)
     ;; The abort happened before any download.
     (check-equal? (uds-processor-received-image processor) '()))
+
+  (test-case "generic routine steps run at both positions"
+    (define channel
+      (make-sim-uds-channel #:extra-routines (list #x0301 #x0302)))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [routine-steps
+                    (list (routine-step 'before-erase #x0301 (hex-parse "00112233") #f)
+                          (routine-step 'after-verify #x0302 '() #f))]))
+    (define result (sim-channel-flash channel plan))
+    (check-true (uds-flash-result-ok result))
+    (check-equal? (map flash-step-summary-step (uds-flash-result-steps result))
+                  '("diagnostic-session" "security-access" "pre-routine" "erase" "download"
+                    "verify" "post-routine" "ecu-reset"))
+    (define pre (findf (lambda (s) (string=? (flash-step-summary-step s) "pre-routine"))
+                       (uds-flash-result-steps result)))
+    (check-true (string-contains? (flash-step-summary-detail pre) "0x0301")))
+
+  (test-case "unknown routine steps abort with requestOutOfRange"
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [routine-steps
+                    (list (routine-step 'before-erase #x0301 '() #f))]))
+    (define result (sim-channel-flash channel plan))
+    (check-false (uds-flash-result-ok result))
+    (define abort (findf (lambda (s) (string=? (flash-step-summary-step s) "abort"))
+                         (uds-flash-result-steps result)))
+    (check-not-false abort)
+    (check-true (string-contains? (flash-step-summary-detail abort) "0x0301"))
+    (check-true (string-contains? (flash-step-summary-detail abort) "requestOutOfRange"))
+    ;; Nothing was erased — the precheck gate stopped the sequence.
+    (define processor (simulated-uds-ecu-processor (unbox (sim-uds-channel-ecu-box channel))))
+    (check-equal? (uds-processor-erase-count processor) 0))
 )

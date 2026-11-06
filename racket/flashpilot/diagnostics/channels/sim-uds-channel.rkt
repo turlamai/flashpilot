@@ -122,7 +122,8 @@
                  verify-count-box
                  dtc-box
                  erase-rounds-box ; #f | remaining in-progress erase answers before done
-                 erase-rounds-init-box) ; the value erase-rounds-box restores to on ECU reset
+                 erase-rounds-init-box ; the value erase-rounds-box restores to on ECU reset
+                 extra-routines-box) ; set of synthetic routine ids accepted in programming session
   #:transparent)
 
 (define no-reply (uds-server-response '() -1))
@@ -144,7 +145,8 @@
 (define sim-erase-done-status #x55)
 
 (define (make-uds-processor [options (default-uds-ecu-options)]
-                            #:erase-rounds-to-done [erase-rounds #f])
+                            #:erase-rounds-to-done [erase-rounds #f]
+                            #:extra-routines [extra-routines '()])
   (uds-processor options
                  (make-semaphore 1)
                  (box uds-session-default)
@@ -158,7 +160,8 @@
                  (box 0)
                  (box (list (hasheq 'dtc #x010870 'status #x2F)))
                  (box erase-rounds)
-                 (box erase-rounds)))
+                 (box erase-rounds)
+                 (box (apply set extra-routines))))
 
 (define (negative sid nrc)
   (uds-server-response (list #x7F sid nrc) 0))
@@ -429,6 +432,14 @@
            (uds-server-response
             (list (bitwise-ior (car request) #x40) kind (third request) (fourth request) #x00)
             (uds-ecu-options-response-delay-ms options))]
+          [(and (set-member? (unbox (uds-processor-extra-routines-box p)) routine-id)
+                (not (= (unbox (uds-processor-session-box p)) uds-session-programming)))
+           (negative (car request) #x7F)]
+          [(and (set-member? (unbox (uds-processor-extra-routines-box p)) routine-id)
+                (memq kind (list routine-start routine-request-results)))
+           (uds-server-response
+            (list (bitwise-ior (car request) #x40) kind (third request) (fourth request) #x00)
+            (uds-ecu-options-response-delay-ms options))]
           [else (negative (car request) #x31)]))))
 
 (define (handle-request-download! p request)
@@ -543,9 +554,11 @@
                                 #:ecu-to-tester-id [ecu-to-tester-id #x7E8]
                                 #:options [options #f]
                                 #:isotp-options [isotp-opts #f]
-                                #:erase-rounds-to-done [erase-rounds #f])
+                                #:erase-rounds-to-done [erase-rounds #f]
+                                #:extra-routines [extra-routines '()])
   (define processor (make-uds-processor (or options (default-uds-ecu-options))
-                                        #:erase-rounds-to-done erase-rounds))
+                                        #:erase-rounds-to-done erase-rounds
+                                        #:extra-routines extra-routines))
   (define ecu-port-bus (make-sim-can-port-bus (simulated-can-bus-attach bus) "sim-ecu"))
   (sim-can-port-bus-open! ecu-port-bus)
   (define endpoint
@@ -676,7 +689,8 @@
                     (uds-flash-plan-p2-timeout-ms spec)
                     (uds-flash-plan-p2-star-timeout-ms spec)
                     (uds-flash-plan-expected-identity spec)
-                    (uds-flash-plan-erase-poll spec)))
+                    (uds-flash-plan-erase-poll spec)
+                    (uds-flash-plan-routine-steps spec)))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))])
     (flash-execute (unbox (can-uds-channel-engine-box c)) plan)))
 
@@ -696,7 +710,9 @@
                           bus
                           ecu-box
                           channel-box
-                          erase-rounds-to-done))
+                          erase-rounds-to-done
+                          extra-routines)
+  #:transparent)
 
 (define (make-sim-uds-channel #:tester-to-ecu-id [tester-to-ecu-id #x7E0]
                               #:ecu-to-tester-id [ecu-to-tester-id #x7E8]
@@ -705,7 +721,8 @@
                               #:max-block-payload [max-block-payload 1024]
                               #:ecu-options [ecu-options #f]
                               #:data-length [data-length 8]
-                              #:erase-rounds-to-done [erase-rounds #f])
+                              #:erase-rounds-to-done [erase-rounds #f]
+                              #:extra-routines [extra-routines '()])
   (sim-uds-channel tester-to-ecu-id
                    ecu-to-tester-id
                    security-level
@@ -717,7 +734,8 @@
                    (make-simulated-can-bus)
                    (box #f)
                    (box #f)
-                   erase-rounds))
+                   erase-rounds
+                   extra-routines))
 
 (define (sim-channel-transport c)
   "iso-tp/can (simulated)")
@@ -733,7 +751,8 @@
                                          #:ecu-to-tester-id (sim-uds-channel-ecu-to-tester-id c)
                                          #:options (sim-uds-channel-ecu-options c)
                                          #:isotp-options (sim-uds-channel-isotp-options c)
-                                         #:erase-rounds-to-done (sim-uds-channel-erase-rounds-to-done c)))
+                                         #:erase-rounds-to-done (sim-uds-channel-erase-rounds-to-done c)
+                                         #:extra-routines (sim-uds-channel-extra-routines c)))
        (set-box! (sim-uds-channel-channel-box c)
                  (make-can-uds-channel
                   (make-sim-can-port-bus (simulated-can-bus-attach (sim-uds-channel-bus c))
