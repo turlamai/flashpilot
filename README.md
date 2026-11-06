@@ -19,7 +19,7 @@ Automotive flashing today means vFlash: expensive per-seat licenses, a Windows G
 
 FlashPilot is built around that loop.
 
-- **Declarative flash plans** — one JSON document per ECU: segments (inline, BIN, Intel HEX, S-record), session, security access with pluggable key providers, erase/download/verify routines, timings, recovery strategy, power guard, expected fingerprint.
+- **Declarative flash plans** — one JSON document per ECU: segments (inline, BIN, Intel HEX, S-record), session, security access with pluggable key providers, erase/download/verify routines, timings, recovery strategy, power guard, ECU identification gate, expected fingerprint.
 - **ODX import + plan lint** — import the flash subset of ASAM ODX (`.odx`/`.pdx`: MEMORY-SEGMENT ranges, inline DATA, DATAFILE references) into a plan with honest reporting of everything not converted; lint plans for overlapping segments, empty ranges and gaps before any driver call.
 - **Real transports** — SocketCAN (Linux), PEAK PCAN (Windows), DoIP (Ethernet). ISO-TP (ISO 15765-2) underneath on classic CAN **and CAN FD** (plan `dataLength` up to 64, SocketCAN FD framing, simulated FD bus). **UDS over LIN ships simulated** (ISO 17987-3 style diagnostic framing, `--transport lin`): the protocol layer is complete and CI-tested; hardware LIN adapters are future work.
 - **Agent-first CLI and MCP server** — deterministic JSON output, exit codes that never lie, and failure evidence (bounded, fingerprinted, audited) so an agent can diagnose and retry without a human opening a vendor tool. The same engine also speaks MCP over stdio: `validate`, `flash`, `request`, `udid` and ODX import as agent tools.
@@ -102,12 +102,14 @@ Every command prints one JSON object — camelCase fields, stable names, bounded
   "keyDeriver": "xor0x5a",
   "onFail": "resetAndRetry",
   "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200 },
+  "expectedIdentity": [{ "did": "0xFD00", "value": "ready" }],
   "expectedFingerprint": "e3400821709d3e50"
 }
 ```
 
 - `onFail` — `retry` or `resetAndRetry` (best-effort ECU reset, then one retry).
 - `powerGuard` — polls the bench supply while programming; out-of-band current powers off and aborts.
+- `expectedIdentity` — ECU identification gate: DIDs are read and compared byte-exact as the first flash step; a wrong target is never touched.
 - `expectedFingerprint` — pins the image; mismatch is rejected before any driver call.
 
 Segments take inline hex (`data`) or raw `.bin` files (`file`), resolved relative to the plan's directory. Intel HEX / S-record parsing ships in the image model; plan-level wiring for `.hex`/`.s19` files is coming. Seed-key algorithms beyond the built-ins plug in as external commands: `"keyDeriver": "command:./my-oem-algo"`.

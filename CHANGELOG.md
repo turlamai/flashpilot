@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Changed
+
+- The simulated ECU identifies itself as `FlashPilot sim-ecu v1.0.4`; the
+  retired bench brand no longer appears in the identity string, the bench
+  status surface or the manual (issue #30).
+
 ### Fixed
 
 - The Windows standalone CLI ZIP now executes `bin/flashpilot.exe` instead of
@@ -15,6 +21,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   Existing v0.1.0 artifacts are unchanged.
 
 ### Added
+
+- **ECU identification gate** — plans accept `expectedIdentity` DID checks
+  (`did` + exact-byte `value`/`valueHex`). The engine reads and compares
+  them as the first flash step, before DiagnosticSessionControl: a wrong
+  target, unsupported DID or short payload aborts with bounded
+  expected/got evidence before any session change, unlock or erase
+  (issue #30). `verify` and the bench `verify-plan` surface the configured
+  expectations; `examples/plan.sim.json` gates on the simulated ECU's
+  `0xFD00` "ready" DID.
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level

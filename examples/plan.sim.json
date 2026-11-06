@@ -2,5 +2,6 @@
   "segments": [{ "address": "0x08000000", "file": "fw.bin" }],
   "session": 2,
   "securityLevel": 1,
-  "keyDeriver": "xor0x5a"
+  "keyDeriver": "xor0x5a",
+  "expectedIdentity": [{ "did": "0xFD00", "value": "ready" }]
 }

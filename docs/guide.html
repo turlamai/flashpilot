@@ -178,7 +178,7 @@ flashpilot flash plan.doip.json --transport doip --host 192.168.0.1 --port 13400
       <p data-i18n="g.flash-flags-p">关键点：</p>
       <ul>
         <li data-i18n="g.flash-f1">--tester / --ecu 是 DoIP 逻辑地址（十六进制），默认 0E00 / 0E10；--port 缺省 13400。</li>
-        <li data-i18n="g.flash-f2">计划里的 onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。</li>
+        <li data-i18n="g.flash-f2">计划里的 expectedIdentity 身份门、onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。</li>
         <li data-i18n="g.flash-f3">成功时 steps 数组是六步审计轨迹；失败时 error 给有界原因，退出码 1。</li>
       </ul>
     </section>
@@ -254,6 +254,7 @@ flashpilot dtc clear</div>
   "p2StarTimeoutMs": 10000,
   "onFail": "resetAndRetry",
   "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200 },
+  "expectedIdentity": [{ "did": "0xFD00", "value": "ready" }],
   "expectedFingerprint": "144252e810505c9f"
 }</div>
       <table>
@@ -265,6 +266,7 @@ flashpilot dtc clear</div>
           <tr><td><code>keyDeriver</code></td><td data-i18n="g.plan-key">内置 xor0x5a；OEM 专有算法用 command:./your-algo 接外部命令（seed 走 stdin/参数、key 回 stdout，厂商代码不进引擎）</td></tr>
           <tr><td><code>onFail</code></td><td data-i18n="g.plan-onfail">retry（原样重试一次）或 resetAndRetry（尽力复位 ECU 再重试一次）</td></tr>
           <tr><td><code>powerGuard</code></td><td data-i18n="g.plan-power">编程中轮询台架电源电流；低于 minMa 或高于 maxMa 即断电中止</td></tr>
+          <tr><td><code>expectedIdentity</code></td><td data-i18n="g.plan-identity">身份门：刷前逐条读 DID（22 XX XX）并做字节级精确比对，不匹配或 DID 不支持就在任何会话切换前中止——错误的 ECU 一次都不会被碰</td></tr>
           <tr><td><code>expectedFingerprint</code></td><td data-i18n="g.plan-fp">指纹门：verify 算出的指纹写死在计划里，不匹配在触碰 ECU 之前就拒绝</td></tr>
           <tr><td><code>p2TimeoutMs</code> / <code>p2StarTimeoutMs</code> / <code>maxBlockPayload</code> / <code>eraseRoutineId</code> / <code>verifyRoutineId</code> / <code>blockRetries</code></td><td data-i18n="g.plan-timing">时序与例程微调，缺省 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0，通常不用动</td></tr>
         </tbody>
@@ -353,7 +355,7 @@ flashpilot dtc clear</div>
       'g.flash-p': 'Runs a declarative flash plan: the built-in simulated ECU by default; --transport doip + --host aim it at a real ECU (ISO 13400-2, port 13400 by default).',
       'g.flash-flags-p': 'Key points:',
       'g.flash-f1': '--tester / --ecu are DoIP logical addresses in hex, defaulting to 0E00 / 0E10; --port defaults to 13400.',
-      'g.flash-f2': 'The plan’s onFail (retry / resetAndRetry), powerGuard (out-of-band current cuts power and aborts) and the expectedFingerprint gate all take effect in this one command.',
+      'g.flash-f2': 'The plan’s expectedIdentity identification gate, onFail (retry / resetAndRetry), powerGuard (out-of-band current cuts power and aborts) and expectedFingerprint gate all take effect in this one command.',
       'g.flash-f3': 'On success the steps array is the six-step audit trail; on failure error carries a bounded reason and the exit code is 1.',
       'g.verify-p': 'Validates the plan and computes the image fingerprint without touching any ECU — the mandatory gate before real hardware, and step one of pinning an image into a plan:',
       'g.verify-flow': 'Recommended loop: verify to learn the fingerprint → write it into the plan’s expectedFingerprint → verify again to see match:true → only then flash. With the pin in place:',
@@ -372,6 +374,7 @@ flashpilot dtc clear</div>
       'g.plan-onfail': 'retry (one plain retry) or resetAndRetry (best-effort ECU reset, then one retry)',
       'g.plan-power': 'Polls the bench supply while programming; below minMa or above maxMa it cuts power and aborts',
       'g.plan-fp': 'The fingerprint gate: pin the fingerprint reported by verify; a mismatch is rejected before the ECU is touched',
+      'g.plan-identity': 'The ECU identification gate: each DID (22 XX XX) is read and compared byte-exact as the first flash step; a mismatch or unsupported DID aborts before any session change — the wrong ECU is never touched',
       'g.plan-timing': 'Timing and routine fine-tuning; defaults 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0 — usually left alone',
       'g.plan-img': 'Intel HEX / S-record parsers are ready in the image-model layer (with contiguous-region merging); wiring them into plan segments directly lands in a later release — for now supply raw .bin segment files.',
       'g.plan-agent-title': 'A note for agents',
@@ -434,7 +437,7 @@ flashpilot dtc clear</div>
       'g.flash-p': '执行一份声明式烧录计划：默认对接内置模拟 ECU；--transport doip + --host 指向真机（ISO 13400-2，默认端口 13400）。',
       'g.flash-flags-p': '关键点：',
       'g.flash-f1': '--tester / --ecu 是 DoIP 逻辑地址（十六进制），默认 0E00 / 0E10；--port 缺省 13400。',
-      'g.flash-f2': '计划里的 onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。',
+      'g.flash-f2': '计划里的 expectedIdentity 身份门、onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。',
       'g.flash-f3': '成功时 steps 数组是六步审计轨迹；失败时 error 给有界原因，退出码 1。',
       'g.verify-p': '只做计划校验与指纹计算，完全不接触 ECU——上真机前的强制关卡，也是把镜像钉进计划的工作流起点：',
       'g.verify-flow': '推荐工作流：verify 拿到 fingerprint → 写进计划的 expectedFingerprint → 再 verify 一次确认 match:true → 才允许 flash。写好之后：',
@@ -453,6 +456,7 @@ flashpilot dtc clear</div>
       'g.plan-onfail': 'retry（原样重试一次）或 resetAndRetry（尽力复位 ECU 再重试一次）',
       'g.plan-power': '编程中轮询台架电源电流；低于 minMa 或高于 maxMa 即断电中止',
       'g.plan-fp': '指纹门：verify 算出的指纹写死在计划里，不匹配在触碰 ECU 之前就拒绝',
+      'g.plan-identity': '身份门：刷前逐条读 DID（22 XX XX）并做字节级精确比对，不匹配或 DID 不支持就在任何会话切换前中止——错误的 ECU 一次都不会被碰',
       'g.plan-timing': '时序与例程微调，缺省 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0，通常不用动',
       'g.plan-img': 'Intel HEX / S-record 解析器已在镜像模型层就绪（含按连续区域合并），计划段直接引用 .hex / .s19 的接线在后续版本开放；当前段文件请提供原始 .bin。',
       'g.plan-agent-title': '给 agent 的提示',

@@ -67,6 +67,7 @@
          uds-processor-erased?
          uds-processor-process!
          uds-processor-received-image
+         uds-processor-session-box
          uds-processor-verify-count
          uds-server-response
          with-mutex*)
@@ -649,7 +650,8 @@
                     (uds-flash-plan-verify-routine-id spec)
                     (uds-flash-plan-block-retries spec)
                     (uds-flash-plan-p2-timeout-ms spec)
-                    (uds-flash-plan-p2-star-timeout-ms spec)))
+                    (uds-flash-plan-p2-star-timeout-ms spec)
+                    (uds-flash-plan-expected-identity spec)))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))])
     (flash-execute (unbox (can-uds-channel-engine-box c)) plan)))
 

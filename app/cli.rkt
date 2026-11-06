@@ -218,7 +218,8 @@
                         'fingerprint fingerprint
                         'expected (or expected 'null)
                         'match (if expected (string-ci=? expected fingerprint) 'null)
-                        'segments (length (uds-flash-plan-segments plan*))))
+                        'segments (length (uds-flash-plan-segments plan*))
+                        'expectedIdentity (identity-json (uds-flash-plan-expected-identity plan*))))
   0)
 
 ;; transports: the support matrix straight from code — evidence levels are
