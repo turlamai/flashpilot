@@ -36,6 +36,11 @@
  doip-client-send-request!
  doip-client-receive-response!
  doip-client-discover
+ doip-client-connected?
+ doip-channel-disconnect!
+ doip-channel-revive!
+ doip-connection-error?
+ doip-uds-channel-reconnect-count
  (struct-out simulated-doip-server)
  start-simulated-doip-server
  simulated-doip-server-processor
@@ -216,6 +221,34 @@
                   (~r code #:base 16 #:min-width 2 #:pad-string "0"))))
        (set-box! (doip-client-connected-box c) #t)))))
 
+;; Disconnects and forgets the link; safe to call on a half-dead client.
+(define (doip-client-disconnect! c)
+  (with-client-mutex
+   c
+   (lambda ()
+     (when (unbox (doip-client-connected-box c))
+       (with-handlers ([exn:fail? (lambda (_) (void))])
+         (close-input-port (unbox (doip-client-in-box c))))
+       (with-handlers ([exn:fail? (lambda (_) (void))])
+         (close-output-port (unbox (doip-client-out-box c)))))
+     (set-box! (doip-client-in-box c) #f)
+     (set-box! (doip-client-out-box c) #f)
+     (set-box! (doip-client-reader-box c) #f)
+     (set-box! (doip-client-connected-box c) #f))))
+
+(define (doip-client-connected? c)
+  (unbox (doip-client-connected-box c)))
+
+;; Connection-class transport errors are the only ones the reconnect
+;; policy may retry: the TCP link died or the peer refused it. UDS
+;; negative responses, NACKs and protocol errors are never transport
+;; errors — retrying those belongs to onFail, not to this layer.
+(define (doip-connection-error? e)
+  (or (exn:fail:network? e)
+      (and (exn:fail? e)
+           (regexp-match? #px"closed by peer|broken pipe|port closed|not currently enabled|Connection refused|Connection timed out|ETIMEDOUT|ECONNRESET|EPIPE|error reading from stream port|error writing to stream port|aborted by the software|win_err=10053|win_err=10054"
+                          (exn-message e)))))
+
 (define (doip-client-send-request! c request #:cancel [cancel #f])
   (unless (unbox (doip-client-connected-box c))
     (doip-error "DoIP client is not connected."))
@@ -327,7 +360,9 @@
          #:ecu-address [ecu-address #x0E10]
          #:vin [vin "BPILSIMECU0000001"]
          #:enable-discovery [enable-discovery #t]
-         #:ecu-options [ecu-options #f])
+         #:ecu-options [ecu-options #f]
+         #:close-on-reset? [close-on-reset? #f]
+         #:refuse-seconds [refuse-seconds 0])
   ;; racket/tcp has no ephemeral-port query; probe a small range.
   (define-values (listener port*)
     (let probe ([attempt 0])
@@ -341,8 +376,17 @@
              (udp-bind! s "127.0.0.1" doip-port)
              s))))
   (define processor (make-uds-processor (or ecu-options (default-uds-ecu-options))))
+  ;; Timestamp (now-millis) until which new connections are dropped
+  ;; immediately after accept — models an ECU that is down while its boot
+  ;; loader verifies images.
+  (define refuse-until-box (box 0))
 
   (define (serve-client in out)
+    (when (> (unbox refuse-until-box) (now-millis))
+      (sleep 0.02)
+      (close-input-port in)
+      (close-output-port out)
+      (error 'sim-doip "refusing connections"))
     (define reader (make-frame-reader in))
     ;; Routing activation: exactly one per connection (single tester sim).
     (define activation (reader #f))
@@ -383,6 +427,17 @@
                     (make-doip-frame-diagnostic-message ecu-address source
                                                         (uds-server-response-response result))
                     #f))
+                 ;; A resetting ECU takes its TCP link down with it and is
+                 ;; unreachable while its boot loader verifies images.
+                 (when (and close-on-reset?
+                            (not (null? request))
+                            (= (car request) #x11))
+                   (set-box! refuse-until-box (+ (now-millis)
+                                                 (* 1000 (max 0 refuse-seconds))))
+                   (sleep 0.05)
+                   (close-input-port in)
+                   (close-output-port out)
+                   (error 'sim-doip "link closed on reset"))
                  (loop)))]
           [(= (doip-frame-type frame) pt-alive-check-request)
            (write-frame! out (doip-frame pt-alive-check-response '(#x00 #x00)) #f)
@@ -446,14 +501,88 @@
 
 (struct doip-uds-channel
   (host port tester-address ecu-address security-level key-deriver-name max-block-payload
-        client-box mutex))
+        client-box mutex reconnect-attempts reconnect-delay-ms reconnect-count-box))
 
+;; reconnect-attempts 0 (the default) keeps the historical behavior: a
+;; dropped link surfaces as an error. N > 0 retries the request on a
+;; freshly re-established connection N times, sleeping reconnect-delay-ms
+;; between rounds — the ECU must not be hammered mid-reboot.
 (define (make-doip-uds-channel host port tester-address ecu-address
                                #:security-level [security-level #f]
                                #:key-deriver-name [key-deriver-name "xor0x5a"]
-                               #:max-block-payload [max-block-payload 1024])
+                               #:max-block-payload [max-block-payload 1024]
+                               #:reconnect-attempts [reconnect-attempts 0]
+                               #:reconnect-delay-ms [reconnect-delay-ms 1000])
   (doip-uds-channel host port tester-address ecu-address security-level key-deriver-name
-                    max-block-payload (box #f) (make-semaphore 1)))
+                    max-block-payload (box #f) (make-semaphore 1)
+                    reconnect-attempts reconnect-delay-ms (box 0)))
+
+(define (doip-uds-channel-reconnect-count c)
+  (unbox (doip-uds-channel-reconnect-count-box c)))
+
+;; Drops the current link and clears the client box so the next
+;; open-doip-channel! performs a fresh TCP connect + routing activation.
+(define (doip-channel-disconnect! c)
+  (define client (unbox (doip-uds-channel-client-box c)))
+  (when client
+    (doip-client-disconnect! client))
+  (with-channel-mutex
+   (doip-uds-channel-mutex c)
+   (lambda () (set-box! (doip-uds-channel-client-box c) #f))))
+
+;; Revive callback for long-running workflows (the post-reset gate): on a
+;; connection-class error, drops the dead link, re-establishes TCP plus
+;; routing activation and reports #t so the caller may retry its read.
+;; Non-connection errors return #f untouched.
+(define (doip-channel-revive! c e)
+  ;; Bounded by the channel's reconnect-attempts/delay: the caller (the
+  ;; gate poll) re-checks its own deadline between rounds. With
+  ;; reconnect-attempts 0 there is no reconnect policy and the error
+  ;; surfaces untouched. Connection-class failures during a revive round
+  ;; (ECU still inside its reboot window) feed the loop; anything else
+  ;; raises.
+  (and (doip-connection-error? e)
+       (not (zero? (doip-uds-channel-reconnect-attempts c)))
+       (let retry ([round 0])
+         (set-box! (doip-uds-channel-reconnect-count-box c)
+                   (add1 (unbox (doip-uds-channel-reconnect-count-box c))))
+         (doip-channel-disconnect! c)
+         (define delay-ms (doip-uds-channel-reconnect-delay-ms c))
+         (when (> delay-ms 0)
+           (sleep (/ delay-ms 1000.0)))
+         (define attempts (doip-uds-channel-reconnect-attempts c))
+         (with-handlers
+             ([exn:fail?
+               (lambda (err)
+                 (cond
+                   [(< round (max 1 attempts)) (retry (add1 round))]
+                   [else (raise err)]))])
+           (open-doip-channel! c)
+           #t))))
+
+;; Runs thunk with the channel's current client; on a connection-class
+;; error, retries after a bounded disconnect / reconnect / routing
+;; activation cycle. UDS-level failures pass straight through — the
+;; recovery policy owns those, not the transport.
+(define (with-doip-client c proc)
+  (define attempts (doip-uds-channel-reconnect-attempts c))
+  (define delay-ms (doip-uds-channel-reconnect-delay-ms c))
+  (let loop ([round 0])
+    (with-handlers
+        ([exn:fail?
+          (lambda (e)
+            (cond
+              [(and (< round attempts) (doip-connection-error? e))
+               (set-box! (doip-uds-channel-reconnect-count-box c)
+                         (add1 (unbox (doip-uds-channel-reconnect-count-box c))))
+               (doip-channel-disconnect! c)
+               (when (> delay-ms 0)
+                 (sleep (/ delay-ms 1000.0)))
+               (loop (add1 round))]
+              [else (raise e)]))])
+      (open-doip-channel! c)
+      (define client (unbox (doip-uds-channel-client-box c)))
+      (proc client))))
 
 (define (hex-up* n width)
   (string-upcase (~r n #:base 16 #:min-width width #:pad-string "0")))
@@ -474,8 +603,6 @@
 
 (define (doip-uds-channel-request c request p2-ms p2-star-ms)
   (define hex (bytes->hex request))
-  (open-doip-channel! c)
-  (define client (unbox (doip-uds-channel-client-box c)))
   (with-handlers ([exn:fail:uds?
                    (lambda (e)
                      (uds-request-result #f #f hex #f
@@ -483,29 +610,58 @@
                                          (exn-message e)))]
                   [exn:fail:doip?
                    (lambda (e)
+                     (uds-request-result #f #f hex #f #f (exn-message e)))]
+                  [doip-connection-error?
+                   (lambda (e)
                      (uds-request-result #f #f hex #f #f (exn-message e)))])
     (define response
-      (uds-send (make-uds-client
-                 (lambda (req cancel) (doip-client-send-request! client req #:cancel cancel))
-                 (lambda (cancel poll) (doip-client-receive-response! client #:cancel cancel)))
-                request
-                #:timing (uds-timing p2-ms p2-star-ms)))
+      (with-doip-client
+       c
+       (lambda (client)
+         (uds-send (make-uds-client
+                    (lambda (req cancel) (doip-client-send-request! client req #:cancel cancel))
+                    (lambda (cancel poll) (doip-client-receive-response! client #:cancel cancel)))
+                   request
+                   #:timing (uds-timing p2-ms p2-star-ms)))))
     (if (uds-response-positive response)
         (uds-request-result #t #t hex (bytes->hex (uds-response-payload response)) #f #f)
         (uds-request-result #t #f hex #f (nrc-name (uds-response-nrc response)) #f))))
 
 (define (doip-uds-channel-flash c spec)
-  (open-doip-channel! c)
-  (define client (unbox (doip-uds-channel-client-box c)))
-  (define uds
-    (make-uds-client
-     (lambda (req cancel) (doip-client-send-request! client req))
-     (lambda (cancel poll) (doip-client-receive-response! client))))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))]
                   [exn:fail:doip?
                    (lambda (e)
+                     (uds-flash-result #f 0 0 0 '() (exn-message e)))]
+                  [doip-connection-error?
+                   (lambda (e)
                      (uds-flash-result #f 0 0 0 '() (exn-message e)))])
-    (flash-execute (make-flash-engine uds (make-key-derivers)) spec)))
+    ;; The send side retries on connection-class errors (nothing was on
+    ;; the wire). The receive side never auto-retries — a fresh link has
+    ;; no pending response, so a blind re-read would hang; instead the
+    ;; engine's post-reset gate revives the link through the revive
+    ;; callback below and keeps polling within its own deadline.
+    (define uds
+      (make-uds-client
+       (lambda (req cancel)
+         (with-doip-client
+          c
+          (lambda (client) (doip-client-send-request! client req #:cancel cancel))))
+       (lambda (cancel poll)
+         (define client (unbox (doip-uds-channel-client-box c)))
+         (doip-client-receive-response! client #:cancel cancel))))
+    (flash-execute (make-flash-engine uds (make-key-derivers)
+                                    #:revive-link
+                                    (lambda (e) (doip-channel-revive! c e))
+                                    #:revive-context
+                                    (lambda ()
+                                      (define client
+                                        (unbox (doip-uds-channel-client-box c)))
+                                      (make-uds-client
+                                       (lambda (req cancel)
+                                         (doip-client-send-request! client req #:cancel cancel))
+                                       (lambda (cancel poll)
+                                         (doip-client-receive-response! client #:cancel cancel)))))
+                   spec)))
 
 (define (setting-address settings key)
   (define v (hash-ref settings key #f))

@@ -53,6 +53,16 @@ runs; nothing resumes blindly. 刷写中断电属于 ECU 引导程序场景。�
 合约：计划的 `expectedFingerprint` 在任何驱动调用前重新校验镜像，新
 一轮从擦除开始；跨运行不携带状态，也不盲目续传。
 
+**DoIP reconnect / DoIP 重连** — With `--reconnect N`, connection-class
+errors (link dropped, peer refused) re-establish the TCP link and routing
+activation within N bounded rounds before surfacing; UDS-level failures
+are never retried here. This is what lets the post-reset confirmation
+gate poll across an ECU's reboot window. With reconnect disabled the
+error surfaces untouched.
+**DoIP 重连** — 使用 `--reconnect N` 时，连接类错误（链路断开、对端拒
+绝）会在 N 轮有界重试内重建 TCP 链路与路由激活；UDS 层失败绝不在此层
+重试。这正是复位后确认门能跨过 ECU 重启窗口持续轮询的原因。禁用重连时
+错误原样上抛。
 **Session loss / 会话失效** — An expired programming session surfaces as
 a negative response (typically `0x7F`/`conditionsNotCorrect`) with the
 failing step named in the evidence; the run stops instead of guessing.

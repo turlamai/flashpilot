@@ -91,6 +91,8 @@ racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1
 
 `flash <plan> --report <path>` 额外把这次运行落成 `flashpilot.report/v1` 证据工件：UTC 开始时间、传输、逐步审计与耗时、身份门与指纹门记录、最终结果。失败也落同样的报告——失败证据才是最要紧的证据。
 
+`--transport doip --reconnect N [--reconnect-delay-ms MS]` 在连接断开时重试（ECU 复位会带走 TCP 链路，引导窗口期内不可达）——有界轮次、每轮全新连接 + 路由激活；UDS 层失败不归这层重试。
+
 ## 烧录计划
 
 ```json

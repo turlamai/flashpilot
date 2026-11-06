@@ -71,10 +71,22 @@
 ;; Engine
 ;; ----------------------------------------------------------------------------
 
-(struct flash-engine (client key-derivers))
+(struct flash-engine (client key-derivers revive-link revive-context))
 
-(define (make-flash-engine client [key-derivers (make-key-derivers)])
-  (flash-engine client key-derivers))
+;; revive-link: optional (exn? -> boolean). Called with a non-UDS failure
+;; during the post-reset gate poll; returning #t means the transport
+;; re-established the link (e.g. a DoIP reconnect) and the poll may
+;; continue. revive-context: optional (-> client) resolving the fresh
+;; client after a revive.
+(define (make-flash-engine client
+                           [key-derivers (make-key-derivers)]
+                           #:revive-link [revive-link #f]
+                           #:revive-context [revive-context #f])
+  (flash-engine client key-derivers revive-link revive-context))
+
+(define (engine-gate-client engine)
+  (define revive-context (flash-engine-revive-context engine))
+  (if revive-context (revive-context) (flash-engine-client engine)))
 
 (define hex-up (lambda (n width) (string-upcase (~r n #:base 16 #:min-width width #:pad-string "0"))))
 
@@ -463,15 +475,33 @@
                                    (hex-up (post-reset-gate-did gate) 4)
                                    (exn-message e))
                            (and (exn:fail:uds-nrc e)
-                                (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))])
-              (uds-require-positive client
+                                (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2))))) ]
+                 ;; A dropped link is "not ready yet", not a verdict: when
+                 ;; the transport revives it, keep polling within the
+                 ;; deadline. Without a revive hook the failure surfaces.
+                 [(lambda (e)
+                    (define revive (flash-engine-revive-link engine))
+                    (and (exn:fail? e)
+                         (not (exn:fail:uds? e))
+                         revive
+                         (revive e)))
+                  (lambda (e) 'revived)])
+              (uds-require-positive (engine-gate-client engine)
                                     (uds-read-did (post-reset-gate-did gate))
                                     #:timing (engine-timing plan)
                                     #:cancel cancel)))
-          (set! last-payload
-                (if (>= (length read-result) 2) (drop read-result 2) '()))
           (cond
-            [(equal? last-payload (post-reset-gate-value gate))
+            [(eq? read-result 'revived)
+             (when (> (now-millis) deadline)
+               (fail! (format "Post-reset gate DID 0x~a never matched within ~a ms (link lost)."
+                              (hex-up (post-reset-gate-did gate) 4)
+                              (post-reset-gate-timeout-ms gate))))
+             (poll)]
+            [else
+             (set! last-payload
+                   (if (>= (length read-result) 2) (drop read-result 2) '()))
+             (cond
+               [(equal? last-payload (post-reset-gate-value gate))
              (add-step!
               (flash-step-summary
                "post-reset-gate"
@@ -486,7 +516,7 @@
                             (hex-up (post-reset-gate-did gate) 4)
                             (post-reset-gate-timeout-ms gate)
                             (truncate-hex last-payload)))]
-            [else (poll)]))))
+            [else (poll)])]))))
 
         (uds-flash-result #t
                           (length (uds-flash-plan-segments plan))
