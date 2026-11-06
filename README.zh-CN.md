@@ -108,6 +108,7 @@ racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1
 - `onFail` —— `retry` 或 `resetAndRetry`（尽力复位 ECU，然后重试一次）。
 - `powerGuard` —— 编程期间轮询台架电源；电流越界即断电中止。
 - `expectedIdentity` —— ECU 身份门：刷前逐条读 DID 并做字节级精确比对，目标不对就拒绝触碰。
+- `erasePoll` —— 轮询式擦除，面向切片擦除型 ECU：重复擦除例程直到状态字节报完成（`statusByte`/`maxRounds`/`roundTimeoutMs`），超限如实中止。
 - `expectedFingerprint` —— 锁定镜像；不匹配在任何驱动调用之前就被拒绝。
 
 段支持内联十六进制（`data`）或原始 `.bin` 文件（`file`），相对计划文件目录解析。Intel HEX / S-record 解析已在镜像模型层就绪；计划段直接引用 `.hex`/`.s19` 的接线在后续版本开放。内置算法之外的 seed-key 算法以外部命令接入：`"keyDeriver": "command:./my-oem-algo"`。
