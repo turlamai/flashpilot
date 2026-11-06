@@ -21,6 +21,7 @@
          (struct-out uds-flash-segment)
          (struct-out identity-check)
          (struct-out erase-poll)
+         (struct-out routine-step)
          (struct-out flash-power-guard)
          (struct-out uds-flash-hardening)
          uds-flash-hardening-plan
@@ -43,7 +44,8 @@
                   p2-timeout-ms
                   p2-star-timeout-ms
                   expected-identity
-                  erase-poll)
+                  erase-poll
+                  routine-steps)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -58,6 +60,52 @@
 ;; max-rounds rounds, each bounded by round-timeout-ms. Absent →
 ;; single-shot erase, exactly the historical behavior.
 (struct erase-poll (status-byte max-rounds round-timeout-ms) #:transparent)
+
+;; A vendor routine call at a fixed point of the flash sequence — the
+;; declarative answer to prechecks (mechanics settling before erase) and
+;; activations (arm the new image after verify). The engine requires a
+;; positive response and records the bytes; vendor status semantics are
+;; never interpreted.
+(struct routine-step (at routine-id record timeout-ms) #:transparent)
+
+(define routine-step-positions '("before-erase" "after-verify"))
+
+;; routineSteps entries: { at, routineId, record?, timeoutMs? }. record is
+;; even-length hex (default empty); timeoutMs > 0 (default: the plan's
+;; p2TimeoutMs).
+(define (parse-routine-steps raw)
+  (unless (list? raw)
+    (raise-validation "Flash plan routineSteps must be a list."))
+  (for/list ([entry (in-list raw)])
+    (unless (hash? entry)
+      (raise-validation "Invalid routineSteps entry: expected an object."))
+    (define at-raw (hash-ref entry 'at #f))
+    (unless (and (string? at-raw) (member at-raw routine-step-positions))
+      (raise-validation
+       (format "Invalid routineSteps at '~a' (use before-erase or after-verify)." at-raw)))
+    (define id-raw (hash-ref entry 'routineId #f))
+    (define routine-id
+      (cond
+        [(exact-integer? id-raw) id-raw]
+        [(and (string? id-raw) (string-prefix? (string-downcase id-raw) "0x"))
+         (string->number (substring id-raw 2) 16)]
+        [else #f]))
+    (unless (and routine-id (exact-integer? routine-id) (<= 0 routine-id #xFFFF))
+      (raise-validation
+       (format "Invalid routineSteps routineId '~a' (use 0x0000..0xFFFF)." id-raw)))
+    (define record-raw (hash-ref entry 'record #f))
+    (define record
+      (if record-raw
+          (begin
+            (unless (string? record-raw)
+              (raise-validation "routineSteps record must be a hex string."))
+            (hex-parse record-raw))
+          '()))
+    (define timeout-raw (hash-ref entry 'timeoutMs #f))
+    (when (and timeout-raw
+               (or (not (exact-integer? timeout-raw)) (not (> timeout-raw 0))))
+      (raise-validation "routineSteps timeoutMs must be an integer > 0."))
+    (routine-step (string->symbol at-raw) routine-id record timeout-raw)))
 
 ;; Shared JSON shape for configured identity gates (CLI verify, bench RPC).
 (define (identity-json checks)
@@ -206,7 +254,9 @@
                     (let ([raw (hash-ref doc 'expectedIdentity #f)])
                       (if raw (parse-identity-entries raw) '()))
                     (let ([raw (hash-ref doc 'erasePoll #f)])
-                      (and raw (parse-erase-poll raw)))))
+                      (and raw (parse-erase-poll raw)))
+                    (let ([raw (hash-ref doc 'routineSteps #f)])
+                      (if raw (parse-routine-steps raw) '()))))
   (define on-fail-raw (hash-ref doc 'onFail #f))
   (define on-fail
     (cond

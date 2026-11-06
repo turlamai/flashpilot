@@ -88,6 +88,48 @@
           (for/list ([shift (in-range 24 -1 -8)])
             (bitwise-and (arithmetic-shift size (- shift)) #xFF))))
 
+;; Generic routine steps (routineSteps plan field): fire RoutineControl
+;; start with the optional record, require a positive response, and audit
+;; the raw bytes — vendor status semantics are never interpreted here.
+(define (run-routine-steps! client
+                            plan
+                            add-step!
+                            fail!
+                            steps-at
+                            position-name
+                            #:cancel [cancel #f])
+  (for ([step (in-list (filter (lambda (st) (eq? (routine-step-at st) steps-at))
+                               (uds-flash-plan-routine-steps plan)))])
+    (let ([sw (now-millis)])
+      (define did-hex (hex-up (routine-step-routine-id step) 4))
+      (define timing
+        (if (routine-step-timeout-ms step)
+            (uds-timing (routine-step-timeout-ms step)
+                        (uds-flash-plan-p2-star-timeout-ms plan))
+            (engine-timing plan)))
+      (define payload
+        (with-handlers
+            ([exn:fail:uds?
+              (lambda (e)
+                (fail! (format "~a routine 0x~a failed: ~a"
+                               position-name did-hex (exn-message e))
+                       (and (exn:fail:uds-nrc e)
+                            (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))])
+          (uds-require-positive client
+                                (uds-routine-control routine-start
+                                                     (routine-step-routine-id step)
+                                                     (routine-step-record step))
+                                #:timing timing
+                                #:cancel cancel)))
+      (add-step!
+       (flash-step-summary
+        position-name
+        #t
+        (format "routine 0x~a accepted (~a)."
+                did-hex (truncate-hex payload))
+        (/ (- (now-millis) sw) 1.0)
+        #f)))))
+
 (define (flash-execute engine plan #:cancel [cancel #f])
   (define started (now-millis))
   (define steps '())
@@ -208,6 +250,10 @@
                     (format "level 0x~a unlocked (seed ~a bytes)." (hex-up level 2) (length seed))
                     (/ (- (now-millis) sw) 1.0)
                     #f))))
+
+    ;; 2b. Optional vendor pre-routines (condition checks before erase).
+    (run-routine-steps! client plan add-step! fail!
+                        'before-erase "pre-routine" #:cancel cancel)
 
     ;; 3. Erase per segment — single-shot by default; when the plan pins
     ;; erasePoll, repeat routine-start (same record — slice-erase ECUs
@@ -347,6 +393,10 @@
                                              (hex-up (uds-flash-plan-verify-routine-id plan) 4))
                                      (/ (- (now-millis) sw) 1.0)
                                      #f)))
+
+    ;; 5b. Optional vendor post-routines (activations after verify).
+    (run-routine-steps! client plan add-step! fail!
+                        'after-verify "post-routine" #:cancel cancel)
 
     ;; 6. ECU reset.
     (let ([sw (now-millis)])
