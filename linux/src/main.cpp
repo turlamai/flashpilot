@@ -72,6 +72,7 @@ void set_controls_sensitive(bool sensitive) {
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.refresh_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.validate_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.verify_button), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(g_state.flash_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.dtc_button), sensitive);
 }
 
