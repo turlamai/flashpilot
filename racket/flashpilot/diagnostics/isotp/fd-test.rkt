@@ -121,6 +121,7 @@
                                  #f
                                  '()
                                  #f
+                                 #f
                                  #f))
     (define result (sim-channel-flash channel plan))
     (check-true (uds-flash-result-ok result))

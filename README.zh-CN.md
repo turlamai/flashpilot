@@ -101,14 +101,14 @@ racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1
   "securityLevel": 1,
   "keyDeriver": "xor0x5a",
   "onFail": "resetAndRetry",
-  "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200 },
+  "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200, "provider": { "kind": "sim", "ma": 1500 } },
   "expectedIdentity": [{ "did": "0xFD00", "value": "ready" }],
   "expectedFingerprint": "e3400821709d3e50"
 }
 ```
 
 - `onFail` —— `retry` 或 `resetAndRetry`（尽力复位 ECU，然后重试一次）。
-- `powerGuard` —— 编程期间轮询台架电源；电流越界即断电中止。
+- `powerGuard` —— 已生效：擦除/下载期间轮询所配电表 provider（内置 `sim`，或外接 `command:` 脚本回读实时 mA）；电流越界永久中止——物理安全事件绝不重试。
 - `expectedIdentity` —— ECU 身份门：刷前逐条读 DID 并做字节级精确比对，目标不对就拒绝触碰。
 - `erasePoll` —— 轮询式擦除，面向切片擦除型 ECU：重复擦除例程直到状态字节报完成（`statusByte`/`maxRounds`/`roundTimeoutMs`），超限如实中止。
 - `routineSteps` —— 固定序列点的厂商例程调用（`before-erase`、`after-verify`）：预检与激活写成声明式条目，要求正响应、审计原始字节。

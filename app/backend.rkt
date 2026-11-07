@@ -132,7 +132,7 @@
           'onFail (or (let ([of (uds-flash-plan-on-fail plan*)])
                         (and of (symbol->string of)))
                       'null)
-          'powerGuard (if (uds-flash-hardening-power-guard hardening) 'configured 'null)
+          'powerGuard (if (uds-flash-plan-power-guard plan*) 'configured 'null)
           'expectedIdentity (identity-json (uds-flash-plan-expected-identity plan*))))
 
 (define-rpc (verify-plan [planPath String] : String)

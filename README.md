@@ -105,14 +105,14 @@ Every command prints one JSON object — camelCase fields, stable names, bounded
   "securityLevel": 1,
   "keyDeriver": "xor0x5a",
   "onFail": "resetAndRetry",
-  "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200 },
+  "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200, "provider": { "kind": "sim", "ma": 1500 } },
   "expectedIdentity": [{ "did": "0xFD00", "value": "ready" }],
   "expectedFingerprint": "e3400821709d3e50"
 }
 ```
 
 - `onFail` — `retry` or `resetAndRetry` (best-effort ECU reset, then one retry).
-- `powerGuard` — polls the bench supply while programming; out-of-band current powers off and aborts.
+- `powerGuard` — enforced: polls the configured meter provider (built-in `sim`, or an external `command:` script printing live mA) during erase/download; out-of-band current aborts permanently — safety events are never retried.
 - `expectedIdentity` — ECU identification gate: DIDs are read and compared byte-exact as the first flash step; a wrong target is never touched.
 - `erasePoll` — polled erase for slice-erase ECUs: repeat the erase routine until a status byte reports done (`statusByte`/`maxRounds`/`roundTimeoutMs`), abort honestly on exhaustion.
 - `routineSteps` — vendor routine calls at fixed sequence points (`before-erase`, `after-verify`): prechecks and activations as declarative plan entries, positive response required, raw bytes audited.

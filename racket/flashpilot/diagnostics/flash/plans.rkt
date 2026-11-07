@@ -24,9 +24,9 @@
          (struct-out routine-step)
          (struct-out post-reset-gate)
          (struct-out flash-power-guard)
+         (struct-out power-provider)
          (struct-out uds-flash-hardening)
          uds-flash-hardening-plan
-         uds-flash-hardening-power-guard
          uds-flash-hardening-expected-fingerprint
          flash-plan-fingerprint
          identity-json
@@ -47,7 +47,8 @@
                   erase-poll
                   routine-steps
                   post-reset-gate
-                  on-fail)
+                  on-fail
+                  power-guard)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -160,8 +161,14 @@
     (hasheq 'did (identity-check-did c)
             'valueHex (bytes->hex (identity-check-value c)))))
 
-(struct flash-power-guard (min-ma max-ma poll-ms) #:transparent)
-(struct uds-flash-hardening (plan power-guard expected-fingerprint data-length)
+(struct flash-power-guard (min-ma max-ma poll-ms provider) #:transparent)
+
+;; The bench-supply meter behind a powerGuard. `sim` reports a constant
+;; (CI and benches); `command` runs an external vendor script per poll and
+;; parses the live current in mA from its stdout — vendor code stays
+;; outside the engine, the keyDeriver command: pattern.
+(struct power-provider (kind command args ma) #:transparent)
+(struct uds-flash-hardening (plan expected-fingerprint data-length)
   #:transparent)
 
 ;; Deterministic FNV-1a over addresses + lengths + data, in plan order.
@@ -251,6 +258,48 @@
     (raise-validation "erasePoll roundTimeoutMs must be an integer > 0."))
   (erase-poll status-byte max-rounds round-timeout))
 
+;; Parses powerGuard: bounds, poll interval and the required meter
+;; provider. Enforcement is real measurements or nothing — a plan never
+;; silently measures with a fake.
+(define (parse-power-guard guard-raw)
+  (unless (hash? guard-raw)
+    (raise-validation "Flash plan powerGuard must be an object."))
+  (define provider-raw (hash-ref guard-raw 'provider #f))
+  (unless (hash? provider-raw)
+    (raise-validation
+     "powerGuard requires a provider: {\"kind\": \"sim\", \"ma\": N} or {\"kind\": \"command\", \"command\": \"./bench-power\"}."))
+  (define kind-raw (hash-ref provider-raw 'kind #f))
+  (define kind
+    (cond
+      [(equal? kind-raw "sim") 'sim]
+      [(equal? kind-raw "command") 'command]
+      [else
+       (raise-validation
+        (format "powerGuard provider kind must be 'sim' or 'command' (got '~a')." kind-raw))]))
+  (define command-raw (hash-ref provider-raw 'command #f))
+  (when (and (eq? kind 'command)
+             (not (and (string? command-raw) (not (string-blank? command-raw)))))
+    (raise-validation "powerGuard command provider needs a non-empty command."))
+  (define args-raw (hash-ref provider-raw 'args '()))
+  (unless (and (list? args-raw) (andmap string? args-raw))
+    (raise-validation "powerGuard provider args must be a list of strings."))
+  (define ma-raw (hash-ref provider-raw 'ma 500))
+  (unless (and (exact-integer? ma-raw) (>= ma-raw 0))
+    (raise-validation "powerGuard sim provider ma must be an integer >= 0."))
+  (define min-ma (hash-ref guard-raw 'minMa #f))
+  (define max-ma (hash-ref guard-raw 'maxMa #f))
+  (unless (and (exact-integer? min-ma) (exact-integer? max-ma))
+    (raise-validation "powerGuard minMa and maxMa must be integers."))
+  (define poll-ms (or (hash-ref guard-raw 'pollMs #f) 200))
+  (unless (and (exact-integer? poll-ms) (> poll-ms 0))
+    (raise-validation "powerGuard pollMs must be an integer > 0."))
+  (flash-power-guard
+   min-ma max-ma poll-ms
+   (power-provider kind
+                   (and (eq? kind 'command) command-raw)
+                   args-raw
+                   ma-raw)))
+
 (define (read-flash-plan-json text)
   (define doc
     (with-handlers ([exn:fail? (lambda (e)
@@ -296,6 +345,9 @@
       [else
        (raise-validation
         (format "Flash plan onFail must be 'retry' or 'resetAndRetry' (got '~a')." on-fail-raw))]))
+  (define power-guard
+    (and (hash-ref doc 'powerGuard #f)
+         (parse-power-guard (hash-ref doc 'powerGuard #f))))
   (define plan
     (uds-flash-plan segments
                     (or (hash-ref doc 'maxBlockPayload #f) 1024)
@@ -315,23 +367,14 @@
                       (if raw (parse-routine-steps raw) '()))
                     (let ([raw (hash-ref doc 'postResetGate #f)])
                       (and raw (parse-post-reset-gate raw)))
-                    on-fail))
-  (define guard-raw (hash-ref doc 'powerGuard #f))
-  (define power-guard
-    (and guard-raw
-         (begin
-           (unless (hash? guard-raw)
-             (raise-validation "Flash plan powerGuard must be an object."))
-           (flash-power-guard
-            (hash-ref guard-raw 'minMa #f)
-            (hash-ref guard-raw 'maxMa #f)
-            (or (hash-ref guard-raw 'pollMs #f) 200)))))
+                    on-fail
+                    power-guard))
   ;; dataLength opts the transport into CAN FD (8 = classic; any other
   ;; value snaps up to the nearest legal FD length). DoIP ignores it.
   (define data-length
     (let ([v (hash-ref doc 'dataLength #f)])
       (if v (can-fd-next-dlen v) classic-data-length)))
-  (uds-flash-hardening plan power-guard
+  (uds-flash-hardening plan
                        (hash-ref doc 'expectedFingerprint #f) data-length))
 
 (define (read-segment-file file base-directory)

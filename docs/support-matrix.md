@@ -76,16 +76,21 @@ name, bounded and fingerprinted failure output). 擦除与下载永不自动重
 试；唯一的自动重试是上述有界块重试，其余一律以结构化证据（步骤名、
 NRC 名、有界且带指纹的失败输出）停止。
 
-**Reserved plan fields / 计划中的保留字段** — `onFail` is now enforced:
-`retry` replays the whole transaction once on a non-permanent failure,
-and `resetAndRetry` adds a best-effort hard EcuReset before the replay;
-the identity gate never replays (a wrong target is not touched twice).
-`powerGuard` remains parsed-but-not-yet-enforced — it needs a real
-bench-supply provider interface and ships as its own slice.
-**已执行字段**：`onFail` 现已生效——`retry` 在非永久性失败后整事务重放
-一次，`resetAndRetry` 在重放前追加尽力硬复位；身份门失败永不重放（错
-误目标不被触碰第二次）。`powerGuard` 仍是解析未执行——它需要真实的
-台架电源 provider 接口，作为独立切片交付。
+**Reserved plan fields / 计划中的保留字段** — both are enforced now.
+`onFail`: `retry` replays the whole transaction once on a non-permanent
+failure, `resetAndRetry` adds a best-effort hard EcuReset first; the
+identity gate never replays (a wrong target is not touched twice).
+`powerGuard`: the engine polls the configured meter provider
+(`sim` constant or an external `command:` script reporting live mA)
+through erase and download; out-of-band current aborts permanently — a
+physical safety event is never blindly retried, and a plan without a
+provider does not enforce (no silent fake meters).
+**已执行字段**：两个都已生效。`onFail`——`retry` 在非永久性失败后整事
+务重放一次，`resetAndRetry` 先尽力硬复位；身份门失败永不重放（错误目
+标不被触碰第二次）。`powerGuard`——引擎在擦除与下载期间轮询所配
+provider（`sim` 常量或外接 `command:` 脚本回读实时 mA）；电流越界永久
+中止——物理安全事件绝不盲目重试；未配 provider 的计划不执行（杜绝静
+默假表）。
 
 ## ODX import honesty / ODX 导入的如实边界
 
