@@ -119,6 +119,24 @@ def main():
         )
         press(validate)
         wait_for("validation result from embedded backend", lambda: contains(window, '"ok":true'))
+
+        flash = wait_for(
+            "Flash plan button",
+            lambda: next(
+                (
+                    node
+                    for node in walk(window)
+                    if (node.name or "") == "Flash plan"
+                    and role(node) == "push button"
+                ),
+                None,
+            ),
+        )
+        press(flash)
+        wait_for(
+            "flash result from the simulated bench",
+            lambda: contains(window, '"ok":true') and contains(window, "ecu-reset"),
+        )
     except Exception:
         if application is not None:
             (args.output / "accessibility-failure.json").write_text(
@@ -133,12 +151,13 @@ def main():
         json.dumps(
             {
                 "platform": "linux",
-                "actions": ["press:Validate bench"],
+                "actions": ["press:Validate bench", "press:Flash plan"],
                 "assertions": [
                     "packaged GTK4 frame activated on native Wayland",
                     "Validate bench exposed through AT-SPI",
                     "validation request crossed RVT1 into the simulated ECU backend",
                     "native result contains ok=true",
+                    "flash plan executed on the simulated bench through AT-SPI",
                 ],
             },
             indent=2,

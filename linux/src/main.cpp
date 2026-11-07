@@ -18,11 +18,13 @@ struct AppState {
   GtkLabel* bench{nullptr};
   GtkLabel* validate{nullptr};
   GtkLabel* plan{nullptr};
+  GtkLabel* flash{nullptr};
   GtkLabel* dtc{nullptr};
   GtkEntry* plan_path{nullptr};
   GtkButton* refresh_button{nullptr};
   GtkButton* validate_button{nullptr};
   GtkButton* verify_button{nullptr};
+  GtkButton* flash_button{nullptr};
   GtkButton* dtc_button{nullptr};
 
   std::unique_ptr<rivet::linux_runtime::Backend> backend;
@@ -197,6 +199,16 @@ void on_verify_clicked(GtkButton*, gpointer) {
       });
 }
 
+void on_flash_clicked(GtkButton*, gpointer) {
+  if (g_state.api == nullptr) return;
+  gtk_widget_set_sensitive(GTK_WIDGET(g_state.flash_button), FALSE);
+  std::string path = gtk_editable_get_text(GTK_EDITABLE(g_state.plan_path));
+  (void)g_state.api->flash_plan_async(
+      std::move(path), [](rivet_app::Result<std::string> result) {
+        deliver_string(std::move(result), g_state.flash, g_state.flash_button);
+      });
+}
+
 void on_dtc_clicked(GtkButton*, gpointer) {
   if (g_state.api == nullptr) return;
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.dtc_button), FALSE);
@@ -274,6 +286,10 @@ void on_activate(GtkApplication* app, gpointer) {
                              gtk_widget_get_first_child(plan_box));
   g_state.plan_path = GTK_ENTRY(path);
   gtk_box_append(GTK_BOX(root), plan_box);
+  auto* flash_box = section("Flash (simulated bench)", &g_state.flash,
+                            "Flash plan", &g_state.flash_button,
+                            G_CALLBACK(on_flash_clicked));
+  gtk_box_append(GTK_BOX(root), flash_box);
   gtk_box_append(GTK_BOX(root),
                  section("Diagnostics", &g_state.dtc, "Read DTCs",
                          &g_state.dtc_button, G_CALLBACK(on_dtc_clicked)));

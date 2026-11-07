@@ -14,6 +14,8 @@ struct MainWindow : MainWindowT<MainWindow> {
                       Microsoft::UI::Xaml::RoutedEventArgs const&);
   void VerifyPlan_Click(winrt::Windows::Foundation::IInspectable const&,
                         Microsoft::UI::Xaml::RoutedEventArgs const&);
+  void FlashPlan_Click(winrt::Windows::Foundation::IInspectable const&,
+                       Microsoft::UI::Xaml::RoutedEventArgs const&);
   void ReadDtc_Click(winrt::Windows::Foundation::IInspectable const&,
                      Microsoft::UI::Xaml::RoutedEventArgs const&);
 
@@ -22,6 +24,7 @@ struct MainWindow : MainWindowT<MainWindow> {
   void RefreshStatusAsync();
   void ValidateAsync();
   void VerifyPlanAsync();
+  void FlashPlanAsync();
   void ReadDtcAsync();
   void SetReadyUi();
   void SetErrorUi(std::string const& message);

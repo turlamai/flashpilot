@@ -75,6 +75,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   simulated DoIP entity that closes its link on reset and refuses
   connections for a window proves the reconnect and exhaustion paths in
   CI (issue #42).
+- **Native flash surface** — the desktop hosts (Windows WinUI, macOS
+  SwiftUI, Linux GTK4) gain a Flash button: the backend's new
+  `flash-plan` RPC runs the plan against the simulated bench ECU and
+  returns the audited steps as JSON — every failure a bounded result,
+  never a dead screen. All three e2e acceptance drivers press the
+  button and assert the result through the platform accessibility API.
+  The backend also gained a shared plan loader, so what a host verifies
+  is exactly what a host flashes.
 - **powerGuard enforced** — the last parsed-not-enforced field is
   settled. `powerGuard` gains a required `provider`: `{"kind": "sim",
   "ma": N}` (deterministic, CI/benches) or `{"kind": "command",

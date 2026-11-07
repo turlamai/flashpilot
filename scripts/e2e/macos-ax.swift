@@ -133,6 +133,20 @@ do {
         contains(window, fragment: "fingerprint") && contains(window, fragment: "Passed") ? true : nil
     }
 
+    // Flash the simulator fixture through the native flash surface: the
+    // audited workflow returns as evidence, no hardware is touched.
+    let flashFinder = findButton(identifierPrefix: "FlashPlanButton-plan.sim.json")
+    let flashButton: AXUIElement = try waitFor("enabled Flash plan button") {
+        guard let button = flashFinder(window), enabled(button) else { return nil }
+        return button
+    }
+    guard AXUIElementPerformAction(flashButton, kAXPressAction as CFString) == .success else {
+        throw DriverError.failure("AXPress failed for Flash plan")
+    }
+    _ = try waitFor("flash result from the simulated bench") {
+        contains(window, fragment: "Flash completed on the simulated bench") ? true : nil
+    }
+
     // Export evidence; the app renders the absolute path it wrote, so the
     // driver asserts the artifact on disk through that rendered path instead
     // of guessing the location (GUI processes resolve Application Support
@@ -197,6 +211,7 @@ do {
         "actions": [
             "press:Validate bench",
             "press:Verify plan.sim.json (bundled fixture)",
+            "press:Flash plan.sim.json (simulated bench)",
             "press:Export evidence",
             "press:Verify plan.sim-missing-image.json (failure injection)",
             "press:Export evidence",
@@ -207,6 +222,7 @@ do {
             "Validate bench exposed through macOS Accessibility",
             "readiness request crossed RVT1 into the simulated ECU backend",
             "bundled simulator fixture verified with a fingerprint, no checkout present",
+            "flash plan executed on the simulated bench through macOS Accessibility",
             "missing-image fixture produced the distinct segment-unavailable recovery",
             "two evidence exports written under Application Support and readable as JSON",
             "no real ECU flashing was initiated by this acceptance",

@@ -72,6 +72,7 @@
    (check-false dtc-error)
    (check-equal? (hash-ref (string->jsexpr dtcs) 'ok) #t)
 
+
    ;; verify-plan: valid plan, segment file resolved relative to the plan.
    (define sim-plan
      (simplify-path (build-path test-directory ".." "examples" "plan.sim.json")))
@@ -87,6 +88,18 @@
    (check-equal? (hash-ref seg-detail 'source) "fw.bin")
    (check-true (> (hash-ref seg-detail 'bytes) 0))
    (check-equal? (hash-ref verified-json 'session) 2)
+
+   ;; flash-plan: the simulated bench ECU executes the bundled plan; the
+   ;; audited workflow comes back as JSON with the seven steps.
+   (define-values (flashed flash-error) (call-rpc "flash-plan" (path->string sim-plan)))
+   (check-false flash-error)
+   (define flashed-json (string->jsexpr flashed))
+   (check-equal? (hash-ref flashed-json 'ok) #t)
+   (check-equal? (hash-ref flashed-json 'error) 'null)
+   (check-true (> (hash-ref flashed-json 'bytes) 0))
+   (check-equal? (hash-ref flashed-json 'steps)
+                 (list "identity" "diagnostic-session" "security-access" "erase"
+                       "download" "verify" "ecu-reset"))
 
    ;; verify-plan: unreadable file -> distinct recovery kind, no wire error.
    (define unreadable

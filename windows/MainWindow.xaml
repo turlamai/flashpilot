@@ -36,6 +36,11 @@
                        FontFamily="Consolas" AutomationProperties.AutomationId="PlanResult" />
             <Button x:Name="VerifyPlanButton" Content="Verify plan" IsEnabled="False"
                     HorizontalAlignment="Stretch" Click="VerifyPlan_Click" />
+            <TextBlock x:Name="FlashText" Text="—" TextWrapping="Wrap"
+                       FontFamily="Consolas" AutomationProperties.AutomationId="FlashResult" />
+            <Button x:Name="FlashPlanButton" Content="Flash plan (simulated bench)" IsEnabled="False"
+                    AutomationProperties.AutomationId="FlashPlanButton"
+                    HorizontalAlignment="Stretch" Click="FlashPlan_Click" />
 
             <TextBlock Text="Diagnostics" FontSize="18" FontWeight="SemiBold" />
             <TextBlock x:Name="DtcText" Text="—" TextWrapping="Wrap"
