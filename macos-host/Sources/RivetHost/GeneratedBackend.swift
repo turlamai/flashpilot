@@ -76,6 +76,10 @@ public struct RivetAPI: Sendable {
         let rivetResult = try await client.call("dtc-read", arguments: [])
         return try decode_String(rivetResult)
     }
+    public func flash_plan(planPath: String) async throws -> String {
+        let rivetResult = try await client.call("flash-plan", arguments: [encode_String(planPath)])
+        return try decode_String(rivetResult)
+    }
     public func verify_plan(planPath: String) async throws -> String {
         let rivetResult = try await client.call("verify-plan", arguments: [encode_String(planPath)])
         return try decode_String(rivetResult)

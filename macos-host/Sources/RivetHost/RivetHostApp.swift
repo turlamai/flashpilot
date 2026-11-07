@@ -169,6 +169,7 @@ final class AppModel: ObservableObject {
     @Published var verification: PlanVerification?
     @Published var evidencePath = ""
     @Published var dtcResult = ""
+    @Published var flashResult = ""
     @Published var busy = false
 
     private var backend: EmbeddedRacketBackend?
@@ -271,6 +272,28 @@ final class AppModel: ObservableObject {
                 readinessOK = false
                 readinessChecks = []
                 readinessRaw = "Error: \(error)"
+            }
+        }
+    }
+
+    var flashSummary: String {
+        guard case .ready = phase, !flashResult.isEmpty else { return "" }
+        return flashResult.contains("\"ok\":true")
+            ? "Flash completed on the simulated bench. See the audited steps."
+            : "The flash did not complete. See the failure evidence."
+    }
+
+    func flashPlan(at url: URL) {
+        guard let backend, phase == .ready, !busy else { return }
+        busy = true
+        let path = (url.path as NSString).expandingTildeInPath
+        Task {
+            defer { busy = false }
+            do {
+                let api = RivetAPI(client: backend.client)
+                flashResult = try await api.flash_plan(planPath: path)
+            } catch {
+                flashResult = "Error: \(error)"
             }
         }
     }

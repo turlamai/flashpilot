@@ -14,6 +14,7 @@
          racket/string)
 
 (require flashpilot/core/contracts
+         flashpilot/diagnostics/flash/engine
          flashpilot/diagnostics/channels/sim-uds-channel
          flashpilot/diagnostics/doip/doip
          flashpilot/diagnostics/flash/plans
@@ -78,7 +79,11 @@
   (path->string
    (path-only (simplify-path (path->complete-path plan-path)))))
 
-(define (verify-plan-result plan-path)
+;; Loads a plan (JSON + file-backed segments resolved) with the shared
+;; recovery semantics; returns (values hardening plan*). Both the verify
+;; surface and the flash surface consume it — what a host verifies is
+;; what a host flashes.
+(define (load-plan plan-path)
   (define text
     (with-handlers ([exn:verify-abort? raise]
                     [exn:fail? (lambda (e)
@@ -107,7 +112,10 @@
                          [data (bytes->list
                                 (read-segment-file (uds-flash-segment-file seg)
                                                    base-dir))])))))
-  (define plan* (struct-copy uds-flash-plan plan [segments loaded]))
+  (values hardening (struct-copy uds-flash-plan plan [segments loaded])))
+
+(define (verify-plan-result plan-path)
+  (define-values (hardening plan*) (load-plan plan-path))
   (define issues (plan-validation-issues plan*))
   (define blocking (plan-blocking-errors issues))
   (define fingerprint (flash-plan-fingerprint (uds-flash-plan-segments plan*)))
@@ -117,14 +125,14 @@
           'file plan-path
           'error 'null
           'findings (plan-issues->json issues)
-          'segments (length loaded)
+          'segments (length (uds-flash-plan-segments plan*))
           'segmentDetails
-          (for/list ([seg (in-list loaded)])
+          (for/list ([seg (in-list (uds-flash-plan-segments plan*))])
             (hasheq 'address (uds-flash-segment-address seg)
                     'bytes (length (uds-flash-segment-data seg))
                     'source (or (uds-flash-segment-file seg) "inline")))
-          'session (or (uds-flash-plan-session plan) 'null)
-          'securityLevel (or (uds-flash-plan-security-level plan) 'null)
+          'session (or (uds-flash-plan-session plan*) 'null)
+          'securityLevel (or (uds-flash-plan-security-level plan*) 'null)
           'dataLength (uds-flash-hardening-data-length hardening)
           'fingerprint fingerprint
           'expected (or expected 'null)
@@ -147,6 +155,63 @@
     (jsexpr->string (verify-plan-result planPath))))
 
 ;; DTC read against the attached ECU.
+;; Runs the plan against the simulated bench ECU — the native-host flash
+;; execution surface. The engine's audited steps come back verbatim;
+;; every failure is a bounded JSON, never a dead screen. Plan paths that
+;; do not resolve on disk fall back to the bundled fixtures (packaged
+;; apps ship examples/ inside the bundle).
+(define (flash-plan-result plan-path)
+  (define resolved
+    (if (or (absolute-path? plan-path) (file-exists? plan-path))
+        plan-path
+        (let ([bundled (and (bundled-fixtures-dir)
+                            (build-path (bundled-fixtures-dir)
+                                        (last (explode-path (simplify-path plan-path)))))])
+          (if (and bundled (file-exists? bundled))
+              (path->string bundled)
+              plan-path))))
+  (define-values (hardening plan*) (load-plan resolved))
+  (define result (sim-channel-flash sim-channel plan*))
+  (jsexpr->string
+   (hasheq 'ok (uds-flash-result-ok result)
+           'bytes (uds-flash-result-total-bytes result)
+           'durationMs (uds-flash-result-duration-ms result)
+           'steps (map flash-step-summary-step (uds-flash-result-steps result))
+           'error (or (uds-flash-result-error result) 'null)
+           'file resolved)))
+
+(define-rpc (flash-plan [planPath String] : String)
+  (with-handlers
+      ([exn:verify-abort?
+        (lambda (e)
+          (jsexpr->string
+           (hasheq 'ok #f
+                   'bytes 0
+                   'durationMs 0
+                   'steps '()
+                   'error (exn:verify-abort-message e)
+                   'file planPath)))]
+       [exn:fail:flash?
+        (lambda (e)
+          (define execution (exn:fail:flash-execution e))
+          (jsexpr->string
+           (hasheq 'ok (uds-flash-result-ok execution)
+                   'bytes (uds-flash-result-total-bytes execution)
+                   'durationMs (uds-flash-result-duration-ms execution)
+                   'steps (map flash-step-summary-step (uds-flash-result-steps execution))
+                   'error (or (uds-flash-result-error execution) (exn-message e))
+                   'file planPath)))]
+       [exn:fail?
+        (lambda (e)
+          (jsexpr->string
+           (hasheq 'ok #f
+                   'bytes 0
+                   'durationMs 0
+                   'steps '()
+                   'error (exn-message e)
+                   'file planPath)))])
+    (flash-plan-result planPath)))
+
 (define-rpc (dtc-read : String)
   (define result (sim-channel-request sim-channel (uds-read-dtcs #xFF) 1000 5000))
   (if (uds-request-result-positive result)

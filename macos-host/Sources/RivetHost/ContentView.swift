@@ -63,6 +63,22 @@ struct ContentView: View {
                         }
                     }
                     verificationCard
+                    if let directory = model.fixturesDirectory, !model.fixtures.isEmpty {
+                        ForEach(model.fixtures.filter { $0.contains("sim") && !$0.contains("missing") },
+                                id: \.self) { fixture in
+                            Button("Flash \(fixture) (simulated bench)") {
+                                model.flashPlan(at: directory.appendingPathComponent(fixture))
+                            }
+                            .disabled(model.busy)
+                            .accessibilityIdentifier("FlashPlanButton-\(fixture)")
+                            if fixture == "plan.sim.json" {
+                                resultLine("FlashResult", model.flashSummary)
+                            }
+                        }
+                        Text("Flashing runs against the simulated bench ECU: the audited workflow returns as evidence, no hardware is touched.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }

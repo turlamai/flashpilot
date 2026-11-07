@@ -55,6 +55,20 @@ try {
         return $false
     })
 
+    $flash = Wait-Until 'enabled Flash plan button' {
+        $candidate = Find-ById $window 'FlashPlanButton'
+        if ($candidate -and $candidate.Current.IsEnabled) { return $candidate }
+        return $null
+    }
+    $flashInvoke = $flash.GetCurrentPattern(
+        [System.Windows.Automation.InvokePattern]::Pattern)
+    ([System.Windows.Automation.InvokePattern]$flashInvoke).Invoke()
+    [void](Wait-Until 'flash result from the simulated bench' {
+        $result = Find-ById $window 'FlashResult'
+        if ($result -and $result.Current.Name -match '"ok":true') { return $true }
+        return $false
+    })
+
     $nodes = $window.FindAll(
         [System.Windows.Automation.TreeScope]::Descendants,
         [System.Windows.Automation.Condition]::TrueCondition)
@@ -71,12 +85,13 @@ try {
     [ordered]@{
         platform = 'windows'
         artifact = $executable.FullName
-        actions = @('invoke:ValidateBenchButton')
+        actions = @('invoke:ValidateBenchButton', 'invoke:FlashPlanButton')
         assertions = @(
             'packaged WinUI window activated',
             'Validate bench exposed through UI Automation',
             'validation request crossed RVT1 into the simulated ECU backend',
-            'native result contains ok=true'
+            'native result contains ok=true',
+            'flash plan executed on the simulated bench through UI Automation'
         )
     } | ConvertTo-Json -Depth 5 |
         Set-Content -LiteralPath (Join-Path $output 'interaction-trace.json') -Encoding utf8

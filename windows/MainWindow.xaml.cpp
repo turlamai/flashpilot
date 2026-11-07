@@ -134,6 +134,12 @@ void MainWindow::VerifyPlan_Click(
   VerifyPlanAsync();
 }
 
+void MainWindow::FlashPlan_Click(
+    winrt::Windows::Foundation::IInspectable const&,
+    Microsoft::UI::Xaml::RoutedEventArgs const&) {
+  FlashPlanAsync();
+}
+
 void MainWindow::ReadDtc_Click(
     winrt::Windows::Foundation::IInspectable const&,
     Microsoft::UI::Xaml::RoutedEventArgs const&) {
@@ -252,6 +258,45 @@ void MainWindow::VerifyPlanAsync() {
   }
 }
 
+void MainWindow::FlashPlanAsync() {
+  auto const dispatcher = DispatcherQueue();
+  auto const weak = get_weak();
+  if (backend_ == nullptr || !backend_->running()) {
+    SetErrorUi("Racket backend is not running");
+    return;
+  }
+  auto path = winrt::to_string(PlanPathBox().Text());
+  FlashPlanButton().IsEnabled(false);
+  try {
+    rivet_app::API api(*backend_);
+    (void)api.flash_plan_async(
+        std::move(path),
+        [dispatcher, weak](rivet_app::Result<std::string> result) {
+          try {
+            auto value = result.get();
+            dispatcher.TryEnqueue([weak, value = std::move(value)] {
+              if (auto window = weak.get()) {
+                window->FlashText().Text(winrt::to_hstring(value));
+                window->FlashPlanButton().IsEnabled(true);
+              }
+            });
+          } catch (std::exception const& e) {
+            auto message = std::string(e.what());
+            dispatcher.TryEnqueue([weak, message = std::move(message)] {
+              if (auto window = weak.get()) {
+                window->FlashText().Text(
+                    winrt::to_hstring("Error: " + message));
+                window->FlashPlanButton().IsEnabled(true);
+              }
+            });
+          }
+        });
+  } catch (std::exception const& e) {
+    FlashText().Text(winrt::to_hstring("Error: " + std::string(e.what())));
+    FlashPlanButton().IsEnabled(true);
+  }
+}
+
 void MainWindow::ReadDtcAsync() {
   auto const dispatcher = DispatcherQueue();
   auto const weak = get_weak();
@@ -295,6 +340,7 @@ void MainWindow::SetReadyUi() {
   RefreshStatusButton().IsEnabled(true);
   ValidateButton().IsEnabled(true);
   VerifyPlanButton().IsEnabled(true);
+  FlashPlanButton().IsEnabled(true);
   ReadDtcButton().IsEnabled(true);
 }
 

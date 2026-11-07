@@ -4,3 +4,8 @@ compiled/
 dist/
 .rivet/
 .build/
+windows/RivetHost/x64/
+windows/RivetHost/ARM64/
+windows/obj/
+windows/packages/
+windows/Generated Files/
