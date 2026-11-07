@@ -118,6 +118,41 @@
     (check-exn exn:benchpilot:validation?
                (lambda () (parse "{\"postResetGate\":{\"did\":1,\"value\":\"a\",\"timeoutMs\":0}}"))))
 
+  (test-case "powerGuard parses bounds and the required provider"
+    (define guard
+      (uds-flash-plan-power-guard
+       (parse "{\"powerGuard\":{\"minMa\":5,\"maxMa\":1500,\"pollMs\":100,\"provider\":{\"kind\":\"sim\",\"ma\":1200}}}")))
+    (check-equal? (flash-power-guard-min-ma guard) 5)
+    (check-equal? (flash-power-guard-max-ma guard) 1500)
+    (check-equal? (flash-power-guard-poll-ms guard) 100)
+    (define prov (flash-power-guard-provider guard))
+    (check-equal? (power-provider-kind prov) 'sim)
+    (check-equal? (power-provider-ma prov) 1200))
+
+  (test-case "powerGuard defaults poll and sim ma, parses command form"
+    (define guard
+      (uds-flash-plan-power-guard
+       (parse "{\"powerGuard\":{\"minMa\":0,\"maxMa\":2000,\"provider\":{\"kind\":\"command\",\"command\":\"./bench-power\",\"args\":[\"--port\",\"com1\"],\"ma\":9}}}")))
+    (check-equal? (flash-power-guard-poll-ms guard) 200)
+    (define prov (flash-power-guard-provider guard))
+    (check-equal? (power-provider-kind prov) 'command)
+    (check-equal? (power-provider-command prov) "./bench-power")
+    (check-equal? (power-provider-args prov) (list "--port" "com1"))
+    ;; ma is meaningless for command providers; parsing still records it.
+    (check-equal? (power-provider-ma prov) 9))
+
+  (test-case "powerGuard without a provider is a validation error"
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"powerGuard\":{\"minMa\":5,\"maxMa\":1500}}"))))
+
+  (test-case "powerGuard rejects unknown provider kind and non-integer bounds"
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"powerGuard\":{\"minMa\":5,\"maxMa\":1500,\"provider\":{\"kind\":\"magic\"}}}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"powerGuard\":{\"minMa\":\"x\",\"maxMa\":1500,\"provider\":{\"kind\":\"sim\"}}}")))
+    (check-exn exn:benchpilot:validation?
+               (lambda () (parse "{\"powerGuard\":{\"minMa\":5,\"maxMa\":1500,\"provider\":{\"kind\":\"command\"}}}"))))
+
   (test-case "erasePoll rejects out-of-range or missing fields"
     (define (parse-erase json) (parse json))
     (check-exn exn:benchpilot:validation?

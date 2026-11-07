@@ -32,6 +32,7 @@
                     #f
                     '()
                     #f
+                    #f
                     #f))
 
   (define (identity-plan-for image checks)
@@ -300,5 +301,64 @@
     (define names (map flash-step-summary-step (uds-flash-result-steps result)))
     (check-equal? names '("abort"))
     (check-false (findf (lambda (s) (string=? s "recovery")) names)))
+
+  (test-case "powerGuard in-band: flash completes with the audit summary"
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [power-guard
+                    (flash-power-guard 5 1500 50 (power-provider 'sim #f '() 1500))]))
+    (define result (sim-channel-flash channel plan))
+    (check-true (uds-flash-result-ok result))
+    (define pg (findf (lambda (s) (string=? (flash-step-summary-step s) "power-guard"))
+                      (uds-flash-result-steps result)))
+    (check-not-false pg)
+    (check-true (string-contains? (flash-step-summary-detail pg) "poll(s) in-band [5, 1500]")))
+
+  (test-case "powerGuard over-current aborts permanently at the erase start"
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [power-guard
+                    (flash-power-guard 5 1500 50 (power-provider 'sim #f '() 2000))]))
+    (define result (sim-channel-flash channel plan))
+    (check-false (uds-flash-result-ok result))
+    (check-equal? (map flash-step-summary-step (uds-flash-result-steps result))
+                  '("diagnostic-session" "security-access" "abort"))
+    (define abort (findf (lambda (s) (string=? (flash-step-summary-step s) "abort"))
+                         (uds-flash-result-steps result)))
+    (check-true (string-contains? (flash-step-summary-detail abort)
+                                  "2000 mA outside [5, 1500]"))
+    (check-true (string-contains? (flash-step-summary-detail abort) "never retried")))
+
+  (test-case "powerGuard under-current aborts permanently"
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [power-guard
+                    (flash-power-guard 600 1500 50 (power-provider 'sim #f '() 500))]))
+    (define result (sim-channel-flash channel plan))
+    (check-false (uds-flash-result-ok result))
+    (define abort (findf (lambda (s) (string=? (flash-step-summary-step s) "abort"))
+                         (uds-flash-result-steps result)))
+    (check-true (string-contains? (flash-step-summary-detail abort)
+                                  "500 mA outside [600, 1500]")))
+
+  (test-case "powerGuard command provider reads real process output"
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [power-guard
+                    (flash-power-guard
+                     5 1500 60000
+                     (power-provider 'command
+                                     (path->string (find-system-path 'exec-file))
+                                     (list "-e" "(display 500)")
+                                     0))]))
+    (define result (sim-channel-flash channel plan))
+    (unless (uds-flash-result-ok result)
+      (displayln (format "command-provider failure: ~a" (uds-flash-result-error result))))
+    (check-true (uds-flash-result-ok result)))
 )
+
 

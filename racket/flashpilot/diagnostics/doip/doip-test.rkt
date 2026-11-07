@@ -38,6 +38,7 @@
                                      (bytes->list (string->bytes/utf-8 "ready"))
                                      8000
                                      200)
+                    #f
                     #f))
 
   (test-case "doip channel reconnects after a reset drops the link"

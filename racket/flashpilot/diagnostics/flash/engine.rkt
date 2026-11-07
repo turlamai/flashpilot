@@ -8,6 +8,8 @@
 (require racket/contract
          racket/format
          racket/list
+         racket/port
+         racket/system
          racket/string)
 
 (require flashpilot/core/contracts
@@ -176,6 +178,45 @@
                               (reverse steps)
                               message))))
 
+  ;; powerGuard enforcement: the plan declares bounds and a meter
+  ;; provider; the engine polls during the destructive phase and aborts
+  ;; permanently on out-of-band current — a physical safety event is
+  ;; never blindly retried, operator investigates.
+  (define guard (uds-flash-plan-power-guard plan))
+  (define last-poll-box (box 0))
+  (define poll-count-box (box 0))
+  (define (poll-current!)
+    (define provider (flash-power-guard-provider guard))
+    (if (eq? (power-provider-kind provider) 'sim)
+        (power-provider-ma provider)
+        (let* ([out (open-output-string)]
+               [exit-code
+                (parameterize ([current-output-port out])
+                  (apply system*/exit-code
+                         (power-provider-command provider)
+                         (power-provider-args provider)))]
+               [text (string-trim (get-output-string out))]
+               [ma (and (not (string-blank? text)) (string->number text))])
+          (unless (and (real? ma) (>= exit-code 0))
+            (fail-permanently!
+             (format "powerGuard provider '~a' failed (exit ~a, output ~a) — safety is unverifiable, aborting."
+                     (power-provider-command provider) exit-code (truncate-hex (string->bytes/utf-8 text) 24))))
+          (inexact->exact (truncate ma)))))
+  (define (check-power!)
+    (when guard
+      (define now (now-millis))
+      (when (>= (- now (unbox last-poll-box)) (flash-power-guard-poll-ms guard))
+        (set-box! last-poll-box now)
+        (set-box! poll-count-box (add1 (unbox poll-count-box)))
+        (define ma (poll-current!))
+        (unless (and (>= ma (flash-power-guard-min-ma guard))
+                     (<= ma (flash-power-guard-max-ma guard)))
+          (fail-permanently!
+           (format "powerGuard: ~a mA outside [~a, ~a] — aborting; physical safety events are never retried."
+                   ma
+                   (flash-power-guard-min-ma guard)
+                   (flash-power-guard-max-ma guard)))))))
+
   ;; onFail recovery envelope: a non-permanent failure in the first
   ;; attempt replays the whole transaction once — fresh session, fresh
   ;; erase, semantically identical to the operator re-running the CLI.
@@ -312,6 +353,7 @@
     ;; erasePoll, repeat routine-start (same record — slice-erase ECUs
     ;; track the window internally) until the status byte reports done,
     ;; at most max-rounds rounds.
+    (check-power!)
     (let ([sw (now-millis)]
           [poll (uds-flash-plan-erase-poll plan)])
       (define starts 0)
@@ -386,6 +428,7 @@
                    [block-sequence #x01])
           (when (< offset (length data))
             (define chunk-size (min (- (length data) offset) max-block-payload))
+            (check-power!)
             (define retry-current
               (with-handlers ([exn:fail:uds? (lambda (e)
                                                (if (< retries (uds-flash-plan-block-retries plan))
@@ -420,7 +463,20 @@
                                        (/ (- (now-millis) sw) 1.0)
                                        #f))))
 
+    ;; 4b. powerGuard audit summary for the destructive phase.
+    (when guard
+      (add-step! (flash-step-summary
+                  "power-guard"
+                  #t
+                  (format "~a poll(s) in-band [~a, ~a] mA."
+                          (unbox poll-count-box)
+                          (flash-power-guard-min-ma guard)
+                          (flash-power-guard-max-ma guard))
+                  (elapsed-ms)
+                  #f)))
+
     ;; 5. Verify via CRC32 routine.
+    (check-power!)
     (let ([sw (now-millis)])
       (define crc (crc32-compute (uds-flash-plan-segments plan)))
       (define response

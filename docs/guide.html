@@ -255,7 +255,7 @@ flashpilot dtc clear</div>
   "p2TimeoutMs": 1000,
   "p2StarTimeoutMs": 10000,
   "onFail": "resetAndRetry",
-  "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200 },
+  "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200, "provider": { "kind": "sim", "ma": 1500 } },
   "expectedIdentity": [{ "did": "0xFD00", "value": "ready" }],
   "expectedFingerprint": "144252e810505c9f"
 }</div>
@@ -267,7 +267,7 @@ flashpilot dtc clear</div>
           <tr><td><code>session</code> / <code>securityLevel</code></td><td data-i18n="g.plan-session">诊断会话与安全访问等级；securityLevel 存在时先走 0x27 seed-key</td></tr>
           <tr><td><code>keyDeriver</code></td><td data-i18n="g.plan-key">内置 xor0x5a；OEM 专有算法用 command:./your-algo 接外部命令（seed 走 stdin/参数、key 回 stdout，厂商代码不进引擎）</td></tr>
           <tr><td><code>onFail</code></td><td data-i18n="g.plan-onfail">retry（原样重试一次）或 resetAndRetry（尽力复位 ECU 再重试一次）</td></tr>
-          <tr><td><code>powerGuard</code></td><td data-i18n="g.plan-power">编程中轮询台架电源电流；低于 minMa 或高于 maxMa 即断电中止</td></tr>
+          <tr><td><code>powerGuard</code></td><td data-i18n="g.plan-power">已生效：擦除/下载期间轮询所配 provider（内置 sim 常量，或外接 command 脚本回读实时 mA）；电流越界永久中止——物理安全事件绝不重试；未配 provider 的计划不执行</td></tr>
           <tr><td><code>expectedIdentity</code></td><td data-i18n="g.plan-identity">身份门：刷前逐条读 DID（22 XX XX）并做字节级精确比对，不匹配或 DID 不支持就在任何会话切换前中止——错误的 ECU 一次都不会被碰</td></tr>
           <tr><td><code>expectedFingerprint</code></td><td data-i18n="g.plan-fp">指纹门：verify 算出的指纹写死在计划里，不匹配在触碰 ECU 之前就拒绝</td></tr>
           <tr><td><code>erasePoll</code></td><td data-i18n="g.plan-erasepoll">轮询式擦除：切片擦除型 ECU 每次擦一段并以状态字节应答；写了 statusByte / maxRounds / roundTimeoutMs 后引擎重复擦除例程直到状态字节报完成，超限即中止</td></tr>
@@ -379,7 +379,7 @@ flashpilot dtc clear</div>
       'g.plan-session': 'Diagnostic session and security-access level; when securityLevel is present a 0x27 seed-key round runs first',
       'g.plan-key': 'Built-in xor0x5a; OEM-specific algorithms plug in as command:./your-algo (seed in, key on stdout — vendor code stays outside the engine)',
       'g.plan-onfail': 'retry (one plain retry) or resetAndRetry (best-effort ECU reset, then one retry)',
-      'g.plan-power': 'Polls the bench supply while programming; below minMa or above maxMa it cuts power and aborts',
+      'g.plan-power': 'Enforced: the engine polls the configured provider (built-in sim constant, or an external command script reporting live mA) during erase/download; out-of-band current aborts permanently — physical safety events are never retried; plans without a provider do not enforce',
       'g.plan-fp': 'The fingerprint gate: pin the fingerprint reported by verify; a mismatch is rejected before the ECU is touched',
       'g.plan-identity': 'The ECU identification gate: each DID (22 XX XX) is read and compared byte-exact as the first flash step; a mismatch or unsupported DID aborts before any session change — the wrong ECU is never touched',
       'g.plan-erasepoll': 'Polled erase for slice-erase ECUs: each erase start answers a vendor status byte; with statusByte / maxRounds / roundTimeoutMs set the engine repeats the erase routine until the byte reports done and aborts honestly on exhaustion',
@@ -466,7 +466,7 @@ flashpilot dtc clear</div>
       'g.plan-session': '诊断会话与安全访问等级；securityLevel 存在时先走 0x27 seed-key',
       'g.plan-key': '内置 xor0x5a；OEM 专有算法用 command:./your-algo 接外部命令（seed 走 stdin/参数、key 回 stdout，厂商代码不进引擎）',
       'g.plan-onfail': 'retry（原样重试一次）或 resetAndRetry（尽力复位 ECU 再重试一次）',
-      'g.plan-power': '编程中轮询台架电源电流；低于 minMa 或高于 maxMa 即断电中止',
+      'g.plan-power': '已生效：擦除/下载期间轮询所配 provider（内置 sim 常量，或外接 command 脚本回读实时 mA）；电流越界永久中止——物理安全事件绝不重试；未配 provider 的计划不执行',
       'g.plan-fp': '指纹门：verify 算出的指纹写死在计划里，不匹配在触碰 ECU 之前就拒绝',
       'g.plan-identity': '身份门：刷前逐条读 DID（22 XX XX）并做字节级精确比对，不匹配或 DID 不支持就在任何会话切换前中止——错误的 ECU 一次都不会被碰',
       'g.plan-erasepoll': '轮询式擦除：切片擦除型 ECU 每次擦一段并以状态字节应答；写了 statusByte / maxRounds / roundTimeoutMs 后引擎重复擦除例程直到状态字节报完成，超限即中止',

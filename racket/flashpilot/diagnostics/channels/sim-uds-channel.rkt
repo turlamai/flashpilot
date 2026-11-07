@@ -703,7 +703,8 @@
                     (uds-flash-plan-erase-poll spec)
                     (uds-flash-plan-routine-steps spec)
                     (uds-flash-plan-post-reset-gate spec)
-                    (uds-flash-plan-on-fail spec)))
+                    (uds-flash-plan-on-fail spec)
+                    (uds-flash-plan-power-guard spec)))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))])
     (flash-execute (unbox (can-uds-channel-engine-box c)) plan)))
 

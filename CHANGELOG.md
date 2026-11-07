@@ -75,6 +75,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   simulated DoIP entity that closes its link on reset and refuses
   connections for a window proves the reconnect and exhaustion paths in
   CI (issue #42).
+- **powerGuard enforced** — the last parsed-not-enforced field is
+  settled. `powerGuard` gains a required `provider`: `{"kind": "sim",
+  "ma": N}` (deterministic, CI/benches) or `{"kind": "command",
+  "command": "./bench-power"}` (external vendor script prints live mA on
+  stdout — vendor code stays outside the engine). The engine polls the
+  meter through erase and every download block (rate-limited by
+  `pollMs`) and aborts **permanently** on out-of-band current — a
+  physical safety event is never blindly retried. A plan never measures
+  with a fake: no provider, no enforcement (issue #44).
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
   transport/adapter subset with an explicit evidence level
