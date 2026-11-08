@@ -20,6 +20,7 @@ struct AppState {
   GtkLabel* validate{nullptr};
   GtkLabel* plan{nullptr};
   GtkLabel* flash{nullptr};
+  GtkLabel* flash_timeline{nullptr};
   GtkLabel* dtc{nullptr};
   GtkEntry* plan_path{nullptr};
   GtkButton* refresh_button{nullptr};
@@ -149,10 +150,10 @@ int on_backend_finished(gpointer) {
             G_PRIORITY_DEFAULT,
             [](gpointer data) -> gboolean {
               auto* line = static_cast<std::string*>(data);
-              if (g_state.flash != nullptr) {
-                auto* current = gtk_label_get_text(g_state.flash);
+              if (g_state.flash_timeline != nullptr) {
+                auto* current = gtk_label_get_text(g_state.flash_timeline);
                 std::string text = (current != nullptr ? current : "") + *line + "\n";
-                gtk_label_set_text(g_state.flash, text.c_str());
+                gtk_label_set_text(g_state.flash_timeline, text.c_str());
               }
               delete line;
               return G_SOURCE_REMOVE;
@@ -230,6 +231,7 @@ void on_flash_clicked(GtkButton*, gpointer) {
   if (g_state.api == nullptr) return;
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.flash_button), FALSE);
   gtk_label_set_text(g_state.flash, "");
+  gtk_label_set_text(g_state.flash_timeline, "");
   std::string path = gtk_editable_get_text(GTK_EDITABLE(g_state.plan_path));
   (void)g_state.api->flash_plan_async(
       std::move(path), [](rivet_app::Result<std::string> result) {
@@ -317,6 +319,16 @@ void on_activate(GtkApplication* app, gpointer) {
   auto* flash_box = section("Flash (simulated bench)", &g_state.flash,
                             "Flash plan", &g_state.flash_button,
                             G_CALLBACK(on_flash_clicked));
+  auto* timeline = gtk_label_new("");
+  gtk_label_set_xalign(GTK_LABEL(timeline), 0.0f);
+  gtk_label_set_wrap(GTK_LABEL(timeline), TRUE);
+  gtk_widget_add_css_class(timeline, "monospace");
+  gtk_widget_add_css_class(timeline, "dim-label");
+  gtk_accessible_update_property(GTK_ACCESSIBLE(timeline),
+                                 GTK_ACCESSIBLE_PROPERTY_LABEL,
+                                 "Flash timeline", -1);
+  gtk_box_append(GTK_BOX(flash_box), timeline);
+  g_state.flash_timeline = GTK_LABEL(timeline);
   gtk_box_append(GTK_BOX(root), flash_box);
   gtk_box_append(GTK_BOX(root),
                  section("Diagnostics", &g_state.dtc, "Read DTCs",
