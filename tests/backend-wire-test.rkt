@@ -109,7 +109,7 @@
      (reverse
       (for/list ([e (in-list collected-events)]
                  #:when (and (pair? e) (equal? (car e) "plan-progress")))
-        (string->jsexpr (cdr e)))))
+        (string->jsexpr (cadr e)))))
    (check-equal? (length progress-events) 7)
    (check-equal? (map (lambda (e) (hash-ref e 'step)) progress-events)
                  (hash-ref flashed-json 'steps))

@@ -149,8 +149,7 @@ int on_backend_finished(gpointer) {
               auto* line = static_cast<std::string*>(data);
               if (g_state.flash != nullptr) {
                 auto* current = gtk_label_get_text(g_state.flash);
-                std::string text = (current != nullptr ? current : "") + *line + "
-";
+                std::string text = (current != nullptr ? current : "") + *line + "\n";
                 gtk_label_set_text(g_state.flash, text.c_str());
               }
               delete line;
