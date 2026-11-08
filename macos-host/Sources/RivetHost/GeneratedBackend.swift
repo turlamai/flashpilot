@@ -7,7 +7,7 @@ public enum RivetGeneratedConfig {
     public static let moduleName = "backend"
     public static let entryName = "start"
     public static let displayName = "FlashPilot"
-    public static let version = "0.1.0"
+    public static let version = "0.2.0"
     public static let build: Int64 = 1
     public static let identifier = "site.jrtx.flashpilot"
     public static let releaseChannel = "stable"
