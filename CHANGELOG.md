@@ -11,6 +11,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   as it happens: the backend emits `plan-progress` events per engine
   step, and all three hosts render a live timeline while the flash runs
   instead of freezing until the final JSON.
+- **Report-shaped flash results** — the desktop hosts receive the full
+  `flashpilot.report/v1` shape for every flash (schema, UTC start,
+  transport, fingerprint and gate records, audited steps): what the CLI
+  `--report` writes to disk is what the GUI surfaces, so a report is one
+  JSON dump away from traceability.
 
 ## [0.2.0] - 2026-11-08
 

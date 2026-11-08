@@ -101,9 +101,12 @@
    (check-equal? (hash-ref flashed-json 'ok) #t)
    (check-equal? (hash-ref flashed-json 'error) 'null)
    (check-true (> (hash-ref flashed-json 'bytes) 0))
-   (check-equal? (hash-ref flashed-json 'steps)
+   (check-equal? (map (lambda (s) (hash-ref s 'step)) (hash-ref flashed-json 'steps))
                  (list "identity" "diagnostic-session" "security-access" "erase"
                        "download" "verify" "ecu-reset"))
+   (check-equal? (hash-ref flashed-json 'schema) "flashpilot.report/v1")
+   (check-true (string? (hash-ref flashed-json 'startedAt)))
+   (check-equal? (hash-ref flashed-json 'transport) "sim-uds (embedded bench)")
    ;; plan-progress events streamed the audited steps live, in order.
    (define progress-events
      (reverse
@@ -112,7 +115,7 @@
         (string->jsexpr (cadr e)))))
    (check-equal? (length progress-events) 7)
    (check-equal? (map (lambda (e) (hash-ref e 'step)) progress-events)
-                 (hash-ref flashed-json 'steps))
+                 (map (lambda (s) (hash-ref s 'step)) (hash-ref flashed-json 'steps)))
    (set! collected-events '())
 
    ;; verify-plan: unreadable file -> distinct recovery kind, no wire error.

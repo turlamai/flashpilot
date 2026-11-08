@@ -15,6 +15,7 @@
 
 (require flashpilot/core/contracts
          flashpilot/diagnostics/flash/engine
+         flashpilot/diagnostics/flash/report
          flashpilot/diagnostics/channels/sim-uds-channel
          flashpilot/diagnostics/doip/doip
          flashpilot/diagnostics/flash/plans
@@ -179,44 +180,57 @@
                        (lambda (step)
                          (emit-event! 'plan-progress
                                       (jsexpr->string (flash-step-summary->jsexpr step))))))
+  ;; The hosts receive the full flashpilot.report/v1 shape — what the CLI
+  ;; --report writes to disk is what the GUI surfaces, so a report is one
+  ;; JSON dump away from traceability.
+  (define report-ctx
+    (make-flash-report-context resolved "sim-uds (embedded bench)"))
   (jsexpr->string
-   (hasheq 'ok (uds-flash-result-ok result)
-           'bytes (uds-flash-result-total-bytes result)
-           'durationMs (uds-flash-result-duration-ms result)
-           'steps (map flash-step-summary-step (uds-flash-result-steps result))
-           'error (or (uds-flash-result-error result) 'null)
-           'file resolved)))
+   (flash-report->jsexpr report-ctx hardening plan* result)))
+
+(define (report-error-shape plan-path message)
+  (hasheq 'schema "flashpilot.report/v1"
+          'startedAt (utc-now)
+          'durationMs 0
+          'ok #f
+          'transport "sim-uds (embedded bench)"
+          'plan plan-path
+          'fingerprint 'null
+          'expectedFingerprint 'null
+          'expectedIdentity '()
+          'bytes 0
+          'segments 0
+          'steps '()
+          'error message))
 
 (define-rpc (flash-plan [planPath String] : String)
   (with-handlers
       ([exn:verify-abort?
         (lambda (e)
           (jsexpr->string
-           (hasheq 'ok #f
-                   'bytes 0
-                   'durationMs 0
-                   'steps '()
-                   'error (exn:verify-abort-message e)
-                   'file planPath)))]
+           (report-error-shape planPath (exn:verify-abort-message e))))]
        [exn:fail:flash?
         (lambda (e)
           (define execution (exn:fail:flash-execution e))
           (jsexpr->string
-           (hasheq 'ok (uds-flash-result-ok execution)
-                   'bytes (uds-flash-result-total-bytes execution)
+           (hasheq 'schema "flashpilot.report/v1"
+                   'startedAt 'null
                    'durationMs (uds-flash-result-duration-ms execution)
-                   'steps (map flash-step-summary-step (uds-flash-result-steps execution))
-                   'error (or (uds-flash-result-error execution) (exn-message e))
-                   'file planPath)))]
+                   'ok (uds-flash-result-ok execution)
+                   'transport "sim-uds (embedded bench)"
+                   'plan planPath
+                   'fingerprint 'null
+                   'expectedFingerprint 'null
+                   'expectedIdentity '()
+                   'bytes (uds-flash-result-total-bytes execution)
+                   'segments (uds-flash-result-segment-count execution)
+                   'steps (map flash-step-summary->jsexpr
+                               (uds-flash-result-steps execution))
+                   'error (or (uds-flash-result-error execution) (exn-message e)))))]
        [exn:fail?
         (lambda (e)
           (jsexpr->string
-           (hasheq 'ok #f
-                   'bytes 0
-                   'durationMs 0
-                   'steps '()
-                   'error (exn-message e)
-                   'file planPath)))])
+           (report-error-shape planPath (exn-message e))))])
     (flash-plan-result planPath)))
 
 (define-rpc (dtc-read : String)
