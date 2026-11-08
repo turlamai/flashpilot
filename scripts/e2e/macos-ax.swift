@@ -146,6 +146,9 @@ do {
     _ = try waitFor("flash result from the simulated bench") {
         contains(window, fragment: "Flash completed on the simulated bench") ? true : nil
     }
+    _ = try waitFor("streamed flash timeline") {
+        contains(window, fragment: "diagnostic-session") ? true : nil
+    }
 
     // Export evidence; the app renders the absolute path it wrote, so the
     // driver asserts the artifact on disk through that rendered path instead

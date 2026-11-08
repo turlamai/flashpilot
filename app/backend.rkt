@@ -171,7 +171,14 @@
               (path->string bundled)
               plan-path))))
   (define-values (hardening plan*) (load-plan resolved))
-  (define result (sim-channel-flash sim-channel plan*))
+  ;; Stream the audited workflow to the hosts as it happens; the final
+  ;; result still arrives through the RPC completion.
+  (define result
+    (sim-channel-flash sim-channel plan*
+                       #:on-step
+                       (lambda (step)
+                         (emit-event! 'plan-progress
+                                      (jsexpr->string (flash-step-summary->jsexpr step))))))
   (jsexpr->string
    (hasheq 'ok (uds-flash-result-ok result)
            'bytes (uds-flash-result-total-bytes result)

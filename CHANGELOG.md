@@ -3,6 +3,15 @@
 All notable changes to FlashPilot are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is SemVer.
 
+## [Unreleased]
+
+### Added
+
+- **Live flash timeline** — the desktop hosts stream the audited workflow
+  as it happens: the backend emits `plan-progress` events per engine
+  step, and all three hosts render a live timeline while the flash runs
+  instead of freezing until the final JSON.
+
 ## [0.2.0] - 2026-11-08
 
 ### Changed

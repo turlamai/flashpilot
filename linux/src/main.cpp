@@ -1,6 +1,7 @@
 #include <gtk/gtk.h>
 
 #include <atomic>
+#include <cstdio>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -136,6 +137,31 @@ int on_backend_finished(gpointer) {
   }
   g_state.backend = std::move(backend);
   g_state.api = std::make_unique<rivet_app::API>(*g_state.backend);
+  // Stream the audited flash workflow into the flash section label.
+  g_state.backend->set_event_handler([](std::string const& name,
+                                        rivet::Value const& value) {
+    std::fprintf(stderr, "[flash-timeline] event: %s\n", name.c_str());
+    try {
+      auto event = rivet_app::decode_event(name, value);
+      if (std::holds_alternative<rivet_app::Plan_progressEvent>(event)) {
+        auto const& progress = std::get<rivet_app::Plan_progressEvent>(event);
+        g_idle_add_full(
+            G_PRIORITY_DEFAULT,
+            [](gpointer data) -> gboolean {
+              auto* line = static_cast<std::string*>(data);
+              if (g_state.flash != nullptr) {
+                auto* current = gtk_label_get_text(g_state.flash);
+                std::string text = (current != nullptr ? current : "") + *line + "\n";
+                gtk_label_set_text(g_state.flash, text.c_str());
+              }
+              delete line;
+              return G_SOURCE_REMOVE;
+            },
+            new std::string(progress.value), nullptr);
+      }
+    } catch (...) {
+    }
+  });
   set_status("Embedded Racket CS is ready");
   set_controls_sensitive(true);
   (void)g_state.api->bench_status_async([](rivet_app::Result<std::string> result) {
@@ -203,6 +229,7 @@ void on_verify_clicked(GtkButton*, gpointer) {
 void on_flash_clicked(GtkButton*, gpointer) {
   if (g_state.api == nullptr) return;
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.flash_button), FALSE);
+  gtk_label_set_text(g_state.flash, "");
   std::string path = gtk_editable_get_text(GTK_EDITABLE(g_state.plan_path));
   (void)g_state.api->flash_plan_async(
       std::move(path), [](rivet_app::Result<std::string> result) {

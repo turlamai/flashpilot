@@ -68,6 +68,11 @@ try {
         if ($result -and $result.Current.Name -match '"ok":true') { return $true }
         return $false
     })
+    [void](Wait-Until 'streamed flash timeline' {
+        $timeline = Find-ById $window 'FlashTimeline'
+        if ($timeline -and $timeline.Current.Name -match 'identity') { return $true }
+        return $false
+    })
 
     $nodes = $window.FindAll(
         [System.Windows.Automation.TreeScope]::Descendants,

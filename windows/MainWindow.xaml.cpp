@@ -73,6 +73,30 @@ winrt::fire_and_forget MainWindow::InitializeBackendAsync() {
       if (auto window = weak.get()) {
         window->backend_ = std::move(backend);
         try {
+          // Stream the audited flash workflow into the timeline as the
+          // backend emits it.
+          auto timeline_dispatcher = window->DispatcherQueue();
+          auto timeline_weak = window->get_weak();
+          window->backend_->set_event_handler(
+              [timeline_dispatcher, timeline_weak](std::string const& name,
+                                                   rivet::Value const& value) {
+                try {
+                  auto event = rivet_app::decode_event(name, value);
+                  if (std::holds_alternative<rivet_app::Plan_progressEvent>(event)) {
+                    auto const& progress =
+                        std::get<rivet_app::Plan_progressEvent>(event);
+                    timeline_dispatcher.TryEnqueue(
+                        [timeline_weak, line = progress.value] {
+                          if (auto current = timeline_weak.get()) {
+                            auto text = current->FlashTimeline().Text() +
+                                        winrt::to_hstring(line) + L"\n";
+                            current->FlashTimeline().Text(text);
+                          }
+                        });
+                  }
+                } catch (...) {
+                }
+              });
           rivet_app::API api(*window->backend_);
           auto const callback_dispatcher = window->DispatcherQueue();
           auto const callback_weak = window->get_weak();
@@ -266,6 +290,7 @@ void MainWindow::FlashPlanAsync() {
     return;
   }
   auto path = winrt::to_string(PlanPathBox().Text());
+  FlashTimeline().Text(L"");
   FlashPlanButton().IsEnabled(false);
   try {
     rivet_app::API api(*backend_);

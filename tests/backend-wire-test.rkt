@@ -28,6 +28,7 @@
   (unbox result))
 
 (define next-id 0)
+(define collected-events '())
 (define (call-rpc name . arguments)
   (set! next-id (add1 next-id))
   (define id next-id)
@@ -37,7 +38,10 @@
   (let loop ()
     (define response (read-frame/timeout name))
     (match (frame-type response)
-      [(== message:event) (loop)]
+      [(== message:event)
+       (set! collected-events
+             (cons (decode-value (frame-payload response)) collected-events))
+       (loop)]
       [(== message:response)
        (check-equal? (frame-id response) id)
        (values (decode-value (frame-payload response)) #f)]
@@ -100,6 +104,16 @@
    (check-equal? (hash-ref flashed-json 'steps)
                  (list "identity" "diagnostic-session" "security-access" "erase"
                        "download" "verify" "ecu-reset"))
+   ;; plan-progress events streamed the audited steps live, in order.
+   (define progress-events
+     (reverse
+      (for/list ([e (in-list collected-events)]
+                 #:when (and (pair? e) (equal? (car e) "plan-progress")))
+        (string->jsexpr (cadr e)))))
+   (check-equal? (length progress-events) 7)
+   (check-equal? (map (lambda (e) (hash-ref e 'step)) progress-events)
+                 (hash-ref flashed-json 'steps))
+   (set! collected-events '())
 
    ;; verify-plan: unreadable file -> distinct recovery kind, no wire error.
    (define unreadable
