@@ -67,7 +67,7 @@ export AT_SPI_BUS_ADDRESS="$(gdbus call --session --dest org.a11y.Bus \
   sed -E "s/^\('([^']+)',\)$/\1/")"
 
 # Standalone simulated DoIP entity (resets away its TCP link).
-racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
+env -u HOME racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
 sim_pid=$!
 sim_port=""
 for _ in $(seq 1 1200); do

@@ -14,7 +14,7 @@ swiftc "$repo/scripts/e2e/macos-ax.swift" -o "$driver" \
 
 # Standalone simulated DoIP entity (resets away its TCP link); the app's
 # Target port defaults to it via FLASHPILOT_SIM_DOIP_PORT.
-racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
+env -u HOME racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
 sim_pid=$!
 sim_port=""
 for _ in $(seq 1 1200); do
