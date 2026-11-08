@@ -175,11 +175,11 @@ final class AppModel: ObservableObject {
     @Published var targetHost = "127.0.0.1"
     @Published var targetPort: String
     @Published var targetReconnect = "6"
-    @Published var remoteFlashResult = 
+    @Published var remoteFlashResult = ""
 
     init() {
         let env = ProcessInfo.processInfo.environment["FLASHPILOT_SIM_DOIP_PORT"]
-        targetPort = env ?? "13400"
+        self.targetPort = env ?? "13400"
     }
 
     private var backend: EmbeddedRacketBackend?
