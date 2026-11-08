@@ -152,9 +152,9 @@ do {
 
     // The DoIP path: the same audited workflow over real TCP against a
     // resetting simulated ECU (the reconnect policy exercised live).
-    let remoteFinder = findButton(window, names: ["FlashRemoteButton"])
     let remoteButton: AXUIElement = try waitFor("enabled Flash over DoIP button") {
-        guard let button = remoteFinder(window), enabled(button) else { return nil }
+        guard let button = findButton(window, names: ["FlashRemoteButton"]),
+              enabled(button) else { return nil }
         return button
     }
     guard AXUIElementPerformAction(remoteButton, kAXPressAction as CFString) == .success else {
