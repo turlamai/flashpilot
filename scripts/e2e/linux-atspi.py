@@ -137,6 +137,10 @@ def main():
             "flash result from the simulated bench",
             lambda: contains(window, '"ok":true') and contains(window, "ecu-reset"),
         )
+        wait_for(
+            "streamed flash timeline",
+            lambda: contains(window, "diagnostic-session") and contains(window, '"step":"identity"'),
+        )
     except Exception:
         if application is not None:
             (args.output / "accessibility-failure.json").write_text(

@@ -170,6 +170,7 @@ final class AppModel: ObservableObject {
     @Published var evidencePath = ""
     @Published var dtcResult = ""
     @Published var flashResult = ""
+    @Published var flashLines: [String] = []
     @Published var busy = false
 
     private var backend: EmbeddedRacketBackend?
@@ -204,12 +205,23 @@ final class AppModel: ObservableObject {
             )
             let backend = EmbeddedRacketBackend(configuration: config)
 
+            // Stream the audited flash workflow into the timeline; the
+            // handler fires on a backend thread, so hop to the main actor.
+            let startOnEvent: RivetClient.EventHandler? = { [weak self] name, value in
+                guard name == "plan-progress" else { return }
+                guard let event = try? RivetEvent.decode(name: name, value: value),
+                      case let .plan_progress(json) = event else { return }
+                DispatchQueue.main.async { [weak self] in
+                    self?.flashLines.append(json)
+                }
+            }
+
             // MainActor-isolated task owning the result; only the blocking
             // engine startup runs detached, with no self capture.
             Task { [backend] in
                 do {
                     let status = try await Task.detached {
-                        try backend.start()
+                        try backend.start(onEvent: startOnEvent)
                         return try await RivetAPI(client: backend.client).bench_status()
                     }.value
                     self.backend = backend
@@ -286,6 +298,7 @@ final class AppModel: ObservableObject {
     func flashPlan(at url: URL) {
         guard let backend, phase == .ready, !busy else { return }
         busy = true
+        flashLines = []
         let path = (url.path as NSString).expandingTildeInPath
         Task {
             defer { busy = false }

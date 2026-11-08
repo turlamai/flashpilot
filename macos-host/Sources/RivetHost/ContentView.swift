@@ -72,6 +72,18 @@ struct ContentView: View {
                             .disabled(model.busy)
                             .accessibilityIdentifier("FlashPlanButton-\(fixture)")
                             if fixture == "plan.sim.json" {
+                                if !model.flashLines.isEmpty {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        ForEach(Array(model.flashLines.enumerated()), id: \.offset) { _, line in
+                                            Text(line)
+                                                .font(.system(.caption2, design: .monospaced))
+                                                .textSelection(.enabled)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityIdentifier("FlashTimeline")
+                                }
                                 resultLine("FlashResult", model.flashSummary)
                             }
                         }

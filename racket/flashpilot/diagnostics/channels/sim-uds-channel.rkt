@@ -685,7 +685,7 @@
         (uds-request-result #t #t hex (bytes->hex (uds-response-payload response)) #f #f)
         (uds-request-result #t #f hex #f (nrc-name (uds-response-nrc response)) #f))))
 
-(define (can-uds-channel-flash c spec)
+(define (can-uds-channel-flash c spec #:on-step [on-step #f])
   (open-can-uds-channel! c)
   (define plan
     (uds-flash-plan (for/list ([seg (in-list (uds-flash-plan-segments spec))])
@@ -706,7 +706,8 @@
                     (uds-flash-plan-on-fail spec)
                     (uds-flash-plan-power-guard spec)))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))])
-    (flash-execute (unbox (can-uds-channel-engine-box c)) plan)))
+    (flash-execute (unbox (can-uds-channel-engine-box c)) plan
+                   #:on-step on-step)))
 
 ;; ----------------------------------------------------------------------------
 ;; SimUdsChannel: the simulator's diagnostics channel — a virtual ECU behind
@@ -787,9 +788,10 @@
   (open-sim-channel! c)
   (can-uds-channel-request (unbox (sim-uds-channel-channel-box c)) request p2-ms p2-star-ms))
 
-(define (sim-channel-flash c plan)
+(define (sim-channel-flash c plan #:on-step [on-step #f])
   (open-sim-channel! c)
-  (can-uds-channel-flash (unbox (sim-uds-channel-channel-box c)) plan))
+  (can-uds-channel-flash (unbox (sim-uds-channel-channel-box c)) plan
+                         #:on-step on-step))
 
 (define (sim-channel-health c)
   (resource-health-result #t

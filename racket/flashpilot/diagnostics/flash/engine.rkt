@@ -144,7 +144,7 @@
         (/ (- (now-millis) sw) 1.0)
         #f)))))
 
-(define (flash-execute engine plan #:cancel [cancel #f])
+(define (flash-execute engine plan #:cancel [cancel #f] #:on-step [on-step #f])
   (define started (now-millis))
   (define steps '())
   (define total-bytes
@@ -152,7 +152,10 @@
   (define client (flash-engine-client engine))
 
   (define (add-step! step)
-    (set! steps (cons step steps)))
+    (set! steps (cons step steps))
+    ;; Live progress surface: hosts and agents can stream the audited
+    ;; workflow as it happens instead of waiting for the final result.
+    (when on-step (on-step step)))
   (define (elapsed-ms)
     (/ (- (now-millis) started) 1.0))
 
