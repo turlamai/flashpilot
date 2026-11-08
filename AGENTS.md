@@ -19,7 +19,7 @@ FlashPilot——agent 原生的 ECU 烧录工具（UDS over CAN/DoIP/LIN，声�
 ```bash
 # 引擎与入口（CI 同款）
 raco pkg install --auto --name flashpilot --link racket
-raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#9d766b4acab672844093204cb4845ef4ef933d2c'
+raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#34b3a0bd899e2ddc1a66bd30c9ea3d0da2dd7c68'
 raco make app/backend.rkt
 raco make app/cli.rkt
 raco test racket/flashpilot
