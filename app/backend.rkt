@@ -41,7 +41,7 @@
 (define-rpc (bench-status : String)
   (jsexpr->string
    (hasheq 'product "FlashPilot"
-           'version "0.1.0"
+           'version "0.2.0"
            'mode "simulator"
            'transport "sim-uds"
            'ecu "FlashPilot sim-ecu v1.0.4"

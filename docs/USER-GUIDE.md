@@ -14,13 +14,14 @@ Desktop source/preview paths target macOS, Windows and Linux. The published arch
 
 Use [official Releases](https://github.com/turlamai/flashpilot/releases), select an explicitly listed OS/architecture asset, read its release notes and check supplied checksums. An absent asset/platform is not a delivery promise. Preview builds may lack publisher signing or notarization; do not disable system-wide security protections to install them.
 
-Portable CLI archive entry points depend on the release: the published **v0.1.0 Windows ZIP** has `flashpilot.exe` at its root, while builds incorporating the [Windows archive-layout fix (#10)](https://github.com/turlamai/flashpilot/issues/10) use `bin/flashpilot.exe`. macOS and Linux CLI ZIPs use `bin/flashpilot`. Extract the **whole archive** without moving just the executable: Racket's support-library subdirectories are OS-specific and must remain intact.
+Portable CLI archive entry points depend on the release: the historical **v0.1.0 Windows ZIP** had `flashpilot.exe` at its root, while builds incorporating the [Windows archive-layout fix (#10)](https://github.com/turlamai/flashpilot/issues/10) — v0.2.0 onward — use `bin/flashpilot.exe`. macOS and Linux CLI ZIPs use `bin/flashpilot`. Extract the **whole archive** without moving just the executable: Racket's support-library subdirectories are OS-specific and must remain intact.
 
 ## Your first successful session
 
 1. Read the manual and choose a supplied simulator/example plan.
 2. Validate the plan and inspect deterministic output, failure status and logs without touching physical equipment.
-3. Before hardware use, match the exact adapter/firmware/ECU to a recorded qualification and establish recovery and power-loss procedures.
+3. Optional, still hardware-free: the desktop hosts carry a Flash button — flashing against the built-in simulated bench ECU returns the audited workflow as evidence.
+4. Before hardware use, match the exact adapter/firmware/ECU to a recorded qualification and establish recovery and power-loss procedures.
 
 ## Diagnostic CLI: `udid` and `request`
 

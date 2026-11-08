@@ -1,0 +1,84 @@
+{
+  "device-rpcs": [],
+  "enums": [],
+  "events": [
+    {
+      "name": "plan-progress",
+      "type": {
+        "kind": "scalar",
+        "name": "String"
+      }
+    }
+  ],
+  "format": "rivet-schema",
+  "format-version": 1,
+  "records": [],
+  "rpcs": [
+    {
+      "arguments": [],
+      "name": "bench-status",
+      "result": {
+        "kind": "scalar",
+        "name": "String"
+      }
+    },
+    {
+      "arguments": [],
+      "name": "bench-validate",
+      "result": {
+        "kind": "scalar",
+        "name": "String"
+      }
+    },
+    {
+      "arguments": [],
+      "name": "dtc-read",
+      "result": {
+        "kind": "scalar",
+        "name": "String"
+      }
+    },
+    {
+      "arguments": [
+        {
+          "name": "planPath",
+          "type": {
+            "kind": "scalar",
+            "name": "String"
+          }
+        }
+      ],
+      "name": "flash-plan",
+      "result": {
+        "kind": "scalar",
+        "name": "String"
+      }
+    },
+    {
+      "arguments": [
+        {
+          "name": "planPath",
+          "type": {
+            "kind": "scalar",
+            "name": "String"
+          }
+        }
+      ],
+      "name": "verify-plan",
+      "result": {
+        "kind": "scalar",
+        "name": "String"
+      }
+    }
+  ],
+  "rvt-protocol": 1,
+  "states": [
+    {
+      "name": "flash-count",
+      "type": {
+        "kind": "scalar",
+        "name": "Int64"
+      }
+    }
+  ]
+}

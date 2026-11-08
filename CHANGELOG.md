@@ -3,7 +3,7 @@
 All notable changes to FlashPilot are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is SemVer.
 
-## [Unreleased]
+## [0.2.0] - 2026-11-08
 
 ### Changed
 
@@ -170,3 +170,5 @@ native shells stay in-repo as a debug cockpit).
   <https://flashpilot.jrtx.site/guide.html>.
 - **Release engineering** — tagged builds produce per-platform CLI archives
   (zip + SHA-256) and a combined SHA256SUMS on GitHub Releases.
+
+[0.2.0]: https://github.com/turlamai/flashpilot/compare/v0.1.0...v0.2.0

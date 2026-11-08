@@ -29,11 +29,11 @@ Not a CANoe clone: no vehicle-network simulation, no CAPL, no analysis-window co
 
 ## Status
 
-**v0.1.x — core engine**: UDS (ISO 14229) with P2/P2* timing and NRC handling, UDS flash workflow (session → security access → erase → download → verify → reset) with per-step audit, declarative plans with recovery strategies (retry / reset-and-retry), image fingerprint gate, in-programming power guard, DTC read/clear, Intel HEX + S-record + BIN image models, pluggable security providers (`command:<id>` external algorithms), ISO-TP over simulated CAN and DoIP, and a built-in simulated ECU so the entire loop runs hardware-free in CI.
+**v0.2.0 — the flashing cockpit**: everything v0.1.x shipped (UDS engine with P2/P2* and NRC handling, audited flash workflow, declarative plans, fingerprint gate, DTC read/clear, Intel HEX + S-record + BIN models, pluggable security providers, ISO-TP over simulated CAN and DoIP, built-in simulated ECU) plus the vFlash-class surface: an ECU identification gate, flash reports, polled erase, generic routine steps, a post-reset confirmation gate, enforced `onFail` recovery, enforced `powerGuard` with pluggable meter providers, bounded DoIP reconnect, and native flash buttons in all three desktop hosts.
 
 The next gates: DoIP Ethernet hardening against real ECUs, hardware LIN adapters, and a plan library. CAN FD shipped: set `"dataLength": 64` in a plan (see `examples/plan.sim-fd.json`) and the whole loop — simulated ECU included — runs FD framing. LIN shipped simulated: `racket app/cli.rkt flash examples/plan.sim.json --transport lin`.
 
-**Released**: v0.1.0 ships the agent-first CLI (`flash` / `verify` / `dtc` / `request` / `udid`) for Windows x64, Linux x64/arm64 and macOS arm64/x64 — versioned ZIP per platform plus one verified SHA256SUMS on the [Releases](https://github.com/turlamai/flashpilot/releases/latest) page. Bilingual user guide: <https://flashpilot.jrtx.site/guide.html>.
+**Released**: v0.2.0 ships the agent-first CLI and the three desktop hosts for Windows x64, Linux x64/arm64 and macOS arm64/x64 — versioned ZIP per platform plus one verified SHA256SUMS on the [Releases](https://github.com/turlamai/flashpilot/releases/latest) page. Bilingual user guide: <https://flashpilot.jrtx.site/guide.html>.
 
 ## Quick start
 

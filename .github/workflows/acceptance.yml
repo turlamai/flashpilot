@@ -15,8 +15,6 @@ concurrency:
   group: acceptance-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  RIVET_PIN: 9d766b4acab672844093204cb4845ef4ef933d2c
 jobs:
   windows:
     name: Windows packaged WinUI acceptance
@@ -34,7 +32,7 @@ jobs:
         shell: pwsh
         run: |
           raco pkg install --auto --name flashpilot --link racket
-          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#$env:RIVET_PIN"
+          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#9d766b4acab672844093204cb4845ef4ef933d2c"
       - name: Run executable acceptance contract
         shell: pwsh
         run: |
@@ -72,7 +70,7 @@ jobs:
       - name: Install local package and pinned Rivet
         run: |
           raco pkg install --auto --name flashpilot --link racket
-          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#${RIVET_PIN}"
+          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#9d766b4acab672844093204cb4845ef4ef933d2c"
       - name: Run executable acceptance contract
         run: |
           set -euo pipefail
@@ -110,7 +108,7 @@ jobs:
             libgtk-4-dev libsecret-1-dev liblz4-dev zlib1g-dev libncurses-dev \
             python3-pyatspi weston
           raco pkg install --auto --name flashpilot --link racket
-          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#${RIVET_PIN}"
+          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#9d766b4acab672844093204cb4845ef4ef933d2c"
       - name: Run executable acceptance contract
         run: |
           set -euo pipefail
