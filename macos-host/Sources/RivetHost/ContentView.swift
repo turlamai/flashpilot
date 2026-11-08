@@ -39,6 +39,24 @@ struct ContentView: View {
                         .accessibilityIdentifier("ReadDtcButton")
                     resultLine("DtcResult", model.dtcSummary)
                 }
+                // A configured DoIP target: the same audited workflow over
+                // the network, with the reconnect policy the engine enforces.
+                Section("Target (DoIP)") {
+                    HStack {
+                        TextField("Host", text: $model.targetHost)
+                            .accessibilityIdentifier("TargetHost")
+                        TextField("Port", text: $model.targetPort)
+                            .frame(width: 90)
+                            .accessibilityIdentifier("TargetPort")
+                        TextField("Reconnect", text: $model.targetReconnect)
+                            .frame(width: 90)
+                            .accessibilityIdentifier("TargetReconnect")
+                    }
+                    Button("Flash over DoIP") { model.flashRemote() }
+                        .disabled(model.busy)
+                        .accessibilityIdentifier("FlashRemoteButton")
+                    resultLine("RemoteFlashResult", model.remoteFlashSummary)
+                }
                 // The static artifact side: plans, their verification and
                 // the evidence they produced. Nothing here touches the ECU.
                 Section("Plan") {

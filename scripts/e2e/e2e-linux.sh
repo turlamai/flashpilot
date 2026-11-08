@@ -38,6 +38,7 @@ cleanup() {
   local status=$?
   trap - EXIT
   [[ -n "$app_pid" ]] && kill -0 "$app_pid" 2>/dev/null && stop_bounded "$app_pid" || true
+  [[ -n "${sim_pid:-}" ]] && kill -0 "$sim_pid" 2>/dev/null && kill -TERM "$sim_pid" 2>/dev/null || true
   [[ -n "$atspi_pid" ]] && kill -0 "$atspi_pid" 2>/dev/null && kill -TERM "$atspi_pid" || true
   kill -TERM "$weston_pid" 2>/dev/null || true
   wait "$app_pid" "$atspi_pid" "$weston_pid" 2>/dev/null || true
@@ -45,7 +46,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for _ in $(seq 1 100); do
+for _ in $(seq 1 1200); do
   [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] && break
   kill -0 "$weston_pid" 2>/dev/null
   sleep 0.05
@@ -55,7 +56,7 @@ launcher="$(command -v at-spi-bus-launcher || true)"
 [[ -n "$launcher" ]] || launcher=/usr/libexec/at-spi-bus-launcher
 "$launcher" --launch-immediately >"$output/at-spi-bus.log" 2>&1 &
 atspi_pid=$!
-for _ in $(seq 1 100); do
+for _ in $(seq 1 1200); do
   gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus \
     --method org.a11y.Bus.GetAddress >/dev/null 2>&1 && break
   kill -0 "$atspi_pid" 2>/dev/null
@@ -65,8 +66,21 @@ export AT_SPI_BUS_ADDRESS="$(gdbus call --session --dest org.a11y.Bus \
   --object-path /org/a11y/bus --method org.a11y.Bus.GetAddress |
   sed -E "s/^\('([^']+)',\)$/\1/")"
 
+# Standalone simulated DoIP entity (resets away its TCP link).
+env -u HOME racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
+sim_pid=$!
+sim_port=""
+for _ in $(seq 1 1200); do
+  if [[ -s "$output/sim-server.log" ]]; then
+    sim_port=$(sed -n 's/.*"port":\([0-9]*\).*/\1/p' "$output/sim-server.log" | head -1)
+    [[ -n "$sim_port" ]] && break
+  fi
+  sleep 0.1
+done
+[[ -n "$sim_port" ]] || { echo "simulated DoIP server did not report a port" >&2; echo "--- sim-server.log ---" >&2; cat "$output/sim-server.log" >&2 2>/dev/null || true; exit 1; }
+
 cd "$repo"
-"$executable" >"$output/application.log" 2>&1 &
+FLASHPILOT_SIM_DOIP_PORT="$sim_port" "$executable" >"$output/application.log" 2>&1 &
 app_pid=$!
 /usr/bin/python3 "$repo/scripts/e2e/linux-atspi.py" --output "$output"
 

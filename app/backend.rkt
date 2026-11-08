@@ -188,12 +188,12 @@
   (jsexpr->string
    (flash-report->jsexpr report-ctx hardening plan* result)))
 
-(define (report-error-shape plan-path message)
+(define (report-error-shape plan-path message [transport "sim-uds (embedded bench)"])
   (hasheq 'schema "flashpilot.report/v1"
           'startedAt (utc-now)
           'durationMs 0
           'ok #f
-          'transport "sim-uds (embedded bench)"
+          'transport transport
           'plan plan-path
           'fingerprint 'null
           'expectedFingerprint 'null
@@ -232,6 +232,87 @@
           (jsexpr->string
            (report-error-shape planPath (exn-message e))))])
     (flash-plan-result planPath)))
+
+;; Runs the plan over DoIP against a configured target — the real-target
+;; path that mirrors the CLI (--transport doip --host H --reconnect N).
+;; The connection object is one JSON string: {host, port, tester, ecu,
+;; reconnectAttempts, reconnectDelayMs}. Same engine, same report shape,
+;; same live plan-progress events as the embedded bench.
+(define (parse-hex-word v label default)
+  (cond
+    [(not v) default]
+    [(string? v)
+     (define n (string->number (if (string-prefix? (string-downcase v) "0x")
+                                   (substring v 2)
+                                   v) 16))
+     (or n default)]
+    [else default]))
+
+(define (flash-plan-remote-result plan-path connection)
+  (define doc
+    (with-handlers ([exn:fail? (lambda (e)
+                                 (verify-abort "connection-invalid" (exn-message e)))])
+      (let ([parsed (read-json (open-input-string connection))])
+        (unless (hash? parsed)
+          (raise (verify-abort "connection-invalid"
+                               "connection must be a JSON object.")))
+        parsed)))
+  (define host (hash-ref doc 'host #f))
+  (unless (and (string? host) (not (string-blank? host)))
+    (raise (verify-abort "connection-invalid" "connection.host must be a non-empty string.")))
+  (define port (or (hash-ref doc 'port #f) doip-port))
+  (define tester (parse-hex-word (hash-ref doc 'tester #f) "tester" #x0E00))
+  (define ecu (parse-hex-word (hash-ref doc 'ecu #f) "ecu" #x0E10))
+  (define reconnect-attempts (or (hash-ref doc 'reconnectAttempts #f) 0))
+  (define reconnect-delay (or (hash-ref doc 'reconnectDelayMs #f) 1000))
+  (define transport-label (string-append "doip " host ":" (number->string port)))
+  (define-values (hardening plan*)
+    (with-handlers ([exn:verify-abort? raise])
+      (load-plan plan-path)))
+  (define channel
+    (make-doip-uds-channel host port tester ecu
+                           #:reconnect-attempts reconnect-attempts
+                           #:reconnect-delay-ms reconnect-delay))
+  (define result
+    (doip-uds-channel-flash channel plan*
+                            #:on-step
+                            (lambda (step)
+                              (emit-event! 'plan-progress
+                                           (jsexpr->string
+                                            (flash-step-summary->jsexpr step))))))
+  (define report-ctx (make-flash-report-context plan-path transport-label))
+  (jsexpr->string (flash-report->jsexpr report-ctx hardening plan* result)))
+
+(define-rpc (flash-plan-remote [planPath String] [connection String] : String)
+  (with-handlers
+      ([exn:verify-abort?
+        (lambda (e)
+          (jsexpr->string
+           (report-error-shape planPath (exn:verify-abort-message e)
+                               "doip")))]
+       [exn:fail:flash?
+        (lambda (e)
+          (define execution (exn:fail:flash-execution e))
+          (jsexpr->string
+           (hasheq 'schema "flashpilot.report/v1"
+                   'startedAt 'null
+                   'durationMs (uds-flash-result-duration-ms execution)
+                   'ok (uds-flash-result-ok execution)
+                   'transport "doip"
+                   'plan planPath
+                   'fingerprint 'null
+                   'expectedFingerprint 'null
+                   'expectedIdentity '()
+                   'bytes (uds-flash-result-total-bytes execution)
+                   'segments (uds-flash-result-segment-count execution)
+                   'steps (map flash-step-summary->jsexpr
+                               (uds-flash-result-steps execution))
+                   'error (or (uds-flash-result-error execution) (exn-message e)))))]
+       [exn:fail?
+        (lambda (e)
+          (jsexpr->string
+           (report-error-shape planPath (exn-message e) "doip")))])
+    (flash-plan-remote-result planPath connection)))
 
 (define-rpc (dtc-read : String)
   (define result (sim-channel-request sim-channel (uds-read-dtcs #xFF) 1000 5000))

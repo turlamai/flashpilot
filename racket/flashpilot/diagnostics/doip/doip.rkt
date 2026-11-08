@@ -627,7 +627,7 @@
         (uds-request-result #t #t hex (bytes->hex (uds-response-payload response)) #f #f)
         (uds-request-result #t #f hex #f (nrc-name (uds-response-nrc response)) #f))))
 
-(define (doip-uds-channel-flash c spec)
+(define (doip-uds-channel-flash c spec #:on-step [on-step #f])
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))]
                   [exn:fail:doip?
                    (lambda (e)
@@ -661,7 +661,7 @@
                                          (doip-client-send-request! client req #:cancel cancel))
                                        (lambda (cancel poll)
                                          (doip-client-receive-response! client #:cancel cancel)))))
-                   spec)))
+                   spec #:on-step on-step)))
 
 (define (setting-address settings key)
   (define v (hash-ref settings key #f))

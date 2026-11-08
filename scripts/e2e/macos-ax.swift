@@ -150,6 +150,20 @@ do {
         contains(window, fragment: "diagnostic-session") ? true : nil
     }
 
+    // The DoIP path: the same audited workflow over real TCP against a
+    // resetting simulated ECU (the reconnect policy exercised live).
+    let remoteButton: AXUIElement = try waitFor("enabled Flash over DoIP button") {
+        guard let button = findButton(window, names: ["FlashRemoteButton"]),
+              enabled(button) else { return nil }
+        return button
+    }
+    guard AXUIElementPerformAction(remoteButton, kAXPressAction as CFString) == .success else {
+        throw DriverError.failure("AXPress failed for Flash over DoIP")
+    }
+    _ = try waitFor("remote flash result over DoIP") {
+        contains(window, fragment: "Flash over DoIP completed") ? true : nil
+    }
+
     // Export evidence; the app renders the absolute path it wrote, so the
     // driver asserts the artifact on disk through that rendered path instead
     // of guessing the location (GUI processes resolve Application Support
@@ -215,6 +229,7 @@ do {
             "press:Validate bench",
             "press:Verify plan.sim.json (bundled fixture)",
             "press:Flash plan.sim.json (simulated bench)",
+            "press:Flash over DoIP (resetting simulated ECU)",
             "press:Export evidence",
             "press:Verify plan.sim-missing-image.json (failure injection)",
             "press:Export evidence",
@@ -226,6 +241,7 @@ do {
             "readiness request crossed RVT1 into the simulated ECU backend",
             "bundled simulator fixture verified with a fingerprint, no checkout present",
             "flash plan executed on the simulated bench through macOS Accessibility",
+            "flash executed over DoIP against a resetting simulated ECU",
             "missing-image fixture produced the distinct segment-unavailable recovery",
             "two evidence exports written under Application Support and readable as JSON",
             "no real ECU flashing was initiated by this acceptance",

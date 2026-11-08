@@ -59,6 +59,12 @@ rivet::windows::RacketRuntimeConfig runtime_config() {
 MainWindow::MainWindow() {
   InitializeComponent();
   Title(L"FlashPilot");
+  wchar_t buffer[16]{};
+  auto const length = ::GetEnvironmentVariableW(
+      L"FLASHPILOT_SIM_DOIP_PORT", buffer, static_cast<DWORD>(sizeof(buffer) / sizeof(buffer[0])));
+  if (length > 0 && length < sizeof(buffer) / sizeof(buffer[0])) {
+    TargetPortBox().Text(buffer);
+  }
   InitializeBackendAsync();
 }
 
@@ -162,6 +168,12 @@ void MainWindow::FlashPlan_Click(
     winrt::Windows::Foundation::IInspectable const&,
     Microsoft::UI::Xaml::RoutedEventArgs const&) {
   FlashPlanAsync();
+}
+
+void MainWindow::FlashRemote_Click(
+    winrt::Windows::Foundation::IInspectable const&,
+    Microsoft::UI::Xaml::RoutedEventArgs const&) {
+  FlashRemoteAsync();
 }
 
 void MainWindow::ReadDtc_Click(
@@ -322,6 +334,53 @@ void MainWindow::FlashPlanAsync() {
   }
 }
 
+void MainWindow::FlashRemoteAsync() {
+  auto const dispatcher = DispatcherQueue();
+  auto const weak = get_weak();
+  if (backend_ == nullptr || !backend_->running()) {
+    SetErrorUi("Racket backend is not running");
+    return;
+  }
+  auto path = winrt::to_string(PlanPathBox().Text());
+  auto host = winrt::to_string(TargetHostBox().Text());
+  auto port = winrt::to_string(TargetPortBox().Text());
+  auto reconnect = winrt::to_string(TargetReconnectBox().Text());
+  auto connection = "{\"host\":\"" + host + "\",\"port\":" + port +
+                    ",\"tester\":\"0x0E00\",\"ecu\":\"0x0E10\",\"reconnectAttempts\":" +
+                    reconnect + ",\"reconnectDelayMs\":400}";
+  FlashRemoteButton().IsEnabled(false);
+  RemoteFlashText().Text(winrt::to_hstring("Flashing over DoIP..."));
+  FlashTimeline().Text(L"");
+  try {
+    rivet_app::API api(*backend_);
+    (void)api.flash_plan_remote_async(
+        std::move(path), std::move(connection),
+        [dispatcher, weak](rivet_app::Result<std::string> result) {
+          try {
+            auto value = result.get();
+            dispatcher.TryEnqueue([weak, value = std::move(value)] {
+              if (auto window = weak.get()) {
+                window->RemoteFlashText().Text(winrt::to_hstring(value));
+                window->FlashRemoteButton().IsEnabled(true);
+              }
+            });
+          } catch (std::exception const& e) {
+            auto message = std::string(e.what());
+            dispatcher.TryEnqueue([weak, message = std::move(message)] {
+              if (auto window = weak.get()) {
+                window->RemoteFlashText().Text(
+                    winrt::to_hstring("Error: " + message));
+                window->FlashRemoteButton().IsEnabled(true);
+              }
+            });
+          }
+        });
+  } catch (std::exception const& e) {
+    RemoteFlashText().Text(winrt::to_hstring("Error: " + std::string(e.what())));
+    FlashRemoteButton().IsEnabled(true);
+  }
+}
+
 void MainWindow::ReadDtcAsync() {
   auto const dispatcher = DispatcherQueue();
   auto const weak = get_weak();
@@ -366,6 +425,7 @@ void MainWindow::SetReadyUi() {
   ValidateButton().IsEnabled(true);
   VerifyPlanButton().IsEnabled(true);
   FlashPlanButton().IsEnabled(true);
+  FlashRemoteButton().IsEnabled(true);
   ReadDtcButton().IsEnabled(true);
 }
 

@@ -16,6 +16,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
   transport, fingerprint and gate records, audited steps): what the CLI
   `--report` writes to disk is what the GUI surfaces, so a report is one
   JSON dump away from traceability.
+- **DoIP connection surface** — the desktop hosts gain a Target section
+  (host, port, reconnect attempts; Flash over DoIP): the new
+  `flash-plan-remote` RPC drives the same audited workflow over real
+  TCP, with the reconnect policy and report shaping identical to the
+  CLI. A new `flashpilot sim-server` command starts a standalone
+  simulated DoIP entity that resets away its TCP link and refuses
+  connections for a window — the packaged-GUI acceptance on all three
+  platforms now flashes over DoIP against that resetting ECU, exercising
+  the reconnect path end to end (issue #50).
 
 ## [0.2.0] - 2026-11-08
 
