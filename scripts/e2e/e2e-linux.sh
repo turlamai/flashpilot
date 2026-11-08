@@ -46,7 +46,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for _ in $(seq 1 100); do
+for _ in $(seq 1 300); do
   [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] && break
   kill -0 "$weston_pid" 2>/dev/null
   sleep 0.05
@@ -56,7 +56,7 @@ launcher="$(command -v at-spi-bus-launcher || true)"
 [[ -n "$launcher" ]] || launcher=/usr/libexec/at-spi-bus-launcher
 "$launcher" --launch-immediately >"$output/at-spi-bus.log" 2>&1 &
 atspi_pid=$!
-for _ in $(seq 1 100); do
+for _ in $(seq 1 300); do
   gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus \
     --method org.a11y.Bus.GetAddress >/dev/null 2>&1 && break
   kill -0 "$atspi_pid" 2>/dev/null
@@ -70,7 +70,7 @@ export AT_SPI_BUS_ADDRESS="$(gdbus call --session --dest org.a11y.Bus \
 racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
 sim_pid=$!
 sim_port=""
-for _ in $(seq 1 100); do
+for _ in $(seq 1 300); do
   if [[ -s "$output/sim-server.log" ]]; then
     sim_port=$(sed -n 's/.*"port":\([0-9]*\).*/\1/p' "$output/sim-server.log" | head -1)
     [[ -n "$sim_port" ]] && break

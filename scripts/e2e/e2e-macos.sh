@@ -17,7 +17,7 @@ swiftc "$repo/scripts/e2e/macos-ax.swift" -o "$driver" \
 racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
 sim_pid=$!
 sim_port=""
-for _ in $(seq 1 100); do
+for _ in $(seq 1 300); do
   if [[ -s "$output/sim-server.log" ]]; then
     sim_port=$(sed -n 's/.*"port":\([0-9]*\).*/\1/p' "$output/sim-server.log" | head -1)
     [[ -n "$sim_port" ]] && break

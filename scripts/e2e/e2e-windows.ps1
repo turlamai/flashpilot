@@ -41,7 +41,7 @@ try {
         -RedirectStandardOutput $simOut `
         -RedirectStandardError (Join-Path $output 'sim-server.err.log')
     $simPort = $null
-    for ($i = 0; $i -lt 100; $i++) {
+    for ($i = 0; $i -lt 300; $i++) {
         if (Test-Path $simOut) {
             try {
                 $line = (Get-Content $simOut -Raw | ConvertFrom-Json)
