@@ -41,7 +41,7 @@ try {
         -RedirectStandardOutput $simOut `
         -RedirectStandardError (Join-Path $output 'sim-server.err.log')
     $simPort = $null
-    for ($i = 0; $i -lt 300; $i++) {
+    for ($i = 0; $i -lt 1200; $i++) {
         if (Test-Path $simOut) {
             try {
                 $line = (Get-Content $simOut -Raw | ConvertFrom-Json)
@@ -50,7 +50,11 @@ try {
         }
         Start-Sleep -Milliseconds 100
     }
-    if (-not $simPort) { throw 'simulated DoIP server did not report a port' }
+    if (-not $simPort) {
+        Write-Host '--- sim-server.log ---'
+        Get-Content $simOut -ErrorAction SilentlyContinue | Write-Host
+        throw 'simulated DoIP server did not report a port'
+    }
     $env:FLASHPILOT_SIM_DOIP_PORT = [string]$simPort
 
     $process = Start-Process -FilePath $executable.FullName -PassThru `

@@ -17,14 +17,14 @@ swiftc "$repo/scripts/e2e/macos-ax.swift" -o "$driver" \
 racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
 sim_pid=$!
 sim_port=""
-for _ in $(seq 1 300); do
+for _ in $(seq 1 1200); do
   if [[ -s "$output/sim-server.log" ]]; then
     sim_port=$(sed -n 's/.*"port":\([0-9]*\).*/\1/p' "$output/sim-server.log" | head -1)
     [[ -n "$sim_port" ]] && break
   fi
   sleep 0.1
 done
-[[ -n "$sim_port" ]] || { echo "simulated DoIP server did not report a port" >&2; exit 1; }
+[[ -n "$sim_port" ]] || { echo "simulated DoIP server did not report a port" >&2; echo "--- sim-server.log ---" >&2; cat "$output/sim-server.log" >&2 2>/dev/null || true; exit 1; }
 
 FLASHPILOT_SIM_DOIP_PORT="$sim_port" HOME="$home" "$app" >"$output/application.log" 2>&1 &
 app_pid=$!
