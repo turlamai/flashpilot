@@ -1,6 +1,7 @@
 #include <gtk/gtk.h>
 
 #include <atomic>
+#include <cstdio>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -139,6 +140,7 @@ int on_backend_finished(gpointer) {
   // Stream the audited flash workflow into the flash section label.
   g_state.backend->set_event_handler([](std::string const& name,
                                         rivet::Value const& value) {
+    std::fprintf(stderr, "[flash-timeline] event: %s\n", name.c_str());
     try {
       auto event = rivet_app::decode_event(name, value);
       if (std::holds_alternative<rivet_app::Plan_progressEvent>(event)) {
