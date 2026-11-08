@@ -29,6 +29,19 @@
                     AutomationProperties.AutomationId="ValidateBenchButton"
                     HorizontalAlignment="Stretch" Click="Validate_Click" />
 
+            <TextBlock Text="Target (DoIP)" FontSize="18" FontWeight="SemiBold" />
+            <TextBox x:Name="TargetHostBox" Header="Host" Text="127.0.0.1"
+                     AutomationProperties.AutomationId="TargetHost" />
+            <TextBox x:Name="TargetPortBox" Header="Port" Text="13400"
+                     AutomationProperties.AutomationId="TargetPort" />
+            <TextBox x:Name="TargetReconnectBox" Header="Reconnect attempts" Text="6"
+                     AutomationProperties.AutomationId="TargetReconnect" />
+            <TextBlock x:Name="RemoteFlashText" Text="—" TextWrapping="Wrap"
+                       FontFamily="Consolas" AutomationProperties.AutomationId="RemoteFlashResult" />
+            <Button x:Name="FlashRemoteButton" Content="Flash over DoIP" IsEnabled="False"
+                    AutomationProperties.AutomationId="FlashRemoteButton"
+                    HorizontalAlignment="Stretch" Click="FlashRemote_Click" />
+
             <TextBlock Text="Plan" FontSize="18" FontWeight="SemiBold" />
             <TextBox x:Name="PlanPathBox" Header="Plan path" Text="examples/plan.sim.json"
                      AutomationProperties.AutomationId="PlanPath" />

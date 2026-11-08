@@ -30,7 +30,29 @@ function Find-ById {
 }
 
 $process = $null
+$sim = $null
 try {
+    # Standalone simulated DoIP entity: resets away its TCP link and refuses
+    # connections for a window. The app's Target port defaults to it via
+    # FLASHPILOT_SIM_DOIP_PORT.
+    $simOut = Join-Path $output 'sim-server.log'
+    $sim = Start-Process -FilePath 'racket' -PassThru -NoNewWindow `
+        -ArgumentList @((Join-Path $repo 'app\cli.rkt'), 'sim-server', '--refuse-seconds', '2') `
+        -RedirectStandardOutput $simOut `
+        -RedirectStandardError (Join-Path $output 'sim-server.err.log')
+    $simPort = $null
+    for ($i = 0; $i -lt 100; $i++) {
+        if (Test-Path $simOut) {
+            try {
+                $line = (Get-Content $simOut -Raw | ConvertFrom-Json)
+                if ($line.ok) { $simPort = $line.port; break }
+            } catch { Start-Sleep -Milliseconds 100 }
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    if (-not $simPort) { throw 'simulated DoIP server did not report a port' }
+    $env:FLASHPILOT_SIM_DOIP_PORT = [string]$simPort
+
     $process = Start-Process -FilePath $executable.FullName -PassThru `
         -WorkingDirectory $repo `
         -RedirectStandardOutput (Join-Path $output 'application.stdout.log') `
@@ -74,6 +96,20 @@ try {
         return $false
     })
 
+    $remote = Wait-Until 'enabled Flash over DoIP button' {
+        $candidate = Find-ById $window 'FlashRemoteButton'
+        if ($candidate -and $candidate.Current.IsEnabled) { return $candidate }
+        return $null
+    }
+    $remoteInvoke = $remote.GetCurrentPattern(
+        [System.Windows.Automation.InvokePattern]::Pattern)
+    ([System.Windows.Automation.InvokePattern]$remoteInvoke).Invoke()
+    [void](Wait-Until 'remote flash result over DoIP' {
+        $result = Find-ById $window 'RemoteFlashResult'
+        if ($result -and $result.Current.Name -match '"ok":true') { return $true }
+        return $false
+    } 90)
+
     $nodes = $window.FindAll(
         [System.Windows.Automation.TreeScope]::Descendants,
         [System.Windows.Automation.Condition]::TrueCondition)
@@ -90,13 +126,14 @@ try {
     [ordered]@{
         platform = 'windows'
         artifact = $executable.FullName
-        actions = @('invoke:ValidateBenchButton', 'invoke:FlashPlanButton')
+        actions = @('invoke:ValidateBenchButton', 'invoke:FlashPlanButton', 'invoke:FlashRemoteButton')
         assertions = @(
             'packaged WinUI window activated',
             'Validate bench exposed through UI Automation',
             'validation request crossed RVT1 into the simulated ECU backend',
             'native result contains ok=true',
-            'flash plan executed on the simulated bench through UI Automation'
+            'flash plan executed on the simulated bench through UI Automation',
+            'flash executed over DoIP against a resetting simulated ECU'
         )
     } | ConvertTo-Json -Depth 5 |
         Set-Content -LiteralPath (Join-Path $output 'interaction-trace.json') -Encoding utf8
@@ -114,4 +151,8 @@ try {
         $process.WaitForExit()
     }
     if ($process) { $process.Dispose() }
+    if ($sim -and -not $sim.HasExited) {
+        Stop-Process -Id $sim.Id -Force -ErrorAction SilentlyContinue
+    }
+    Remove-Item Env:FLASHPILOT_SIM_DOIP_PORT -ErrorAction SilentlyContinue
 }

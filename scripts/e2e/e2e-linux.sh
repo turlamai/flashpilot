@@ -38,6 +38,7 @@ cleanup() {
   local status=$?
   trap - EXIT
   [[ -n "$app_pid" ]] && kill -0 "$app_pid" 2>/dev/null && stop_bounded "$app_pid" || true
+  [[ -n "${sim_pid:-}" ]] && kill -0 "$sim_pid" 2>/dev/null && kill -TERM "$sim_pid" 2>/dev/null || true
   [[ -n "$atspi_pid" ]] && kill -0 "$atspi_pid" 2>/dev/null && kill -TERM "$atspi_pid" || true
   kill -TERM "$weston_pid" 2>/dev/null || true
   wait "$app_pid" "$atspi_pid" "$weston_pid" 2>/dev/null || true
@@ -65,8 +66,21 @@ export AT_SPI_BUS_ADDRESS="$(gdbus call --session --dest org.a11y.Bus \
   --object-path /org/a11y/bus --method org.a11y.Bus.GetAddress |
   sed -E "s/^\('([^']+)',\)$/\1/")"
 
+# Standalone simulated DoIP entity (resets away its TCP link).
+racket "$repo/app/cli.rkt" sim-server --refuse-seconds 2 >"$output/sim-server.log" 2>&1 &
+sim_pid=$!
+sim_port=""
+for _ in $(seq 1 100); do
+  if [[ -s "$output/sim-server.log" ]]; then
+    sim_port=$(sed -n 's/.*"port":\([0-9]*\).*/\1/p' "$output/sim-server.log" | head -1)
+    [[ -n "$sim_port" ]] && break
+  fi
+  sleep 0.1
+done
+[[ -n "$sim_port" ]] || { echo "simulated DoIP server did not report a port" >&2; exit 1; }
+
 cd "$repo"
-"$executable" >"$output/application.log" 2>&1 &
+FLASHPILOT_SIM_DOIP_PORT="$sim_port" "$executable" >"$output/application.log" 2>&1 &
 app_pid=$!
 /usr/bin/python3 "$repo/scripts/e2e/linux-atspi.py" --output "$output"
 

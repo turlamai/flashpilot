@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require json rackunit racket/match racket/path racket/file
-         rivet/backend rivet/protocol)
+         rivet/backend rivet/protocol
+         flashpilot/diagnostics/doip/doip)
 
 (define test-directory
   (or (current-load-relative-directory) (current-directory)))
@@ -117,6 +118,34 @@
    (check-equal? (map (lambda (e) (hash-ref e 'step)) progress-events)
                  (map (lambda (s) (hash-ref s 'step)) (hash-ref flashed-json 'steps)))
    (set! collected-events '())
+
+   ;; flash-plan-remote: the DoIP path through the same RPC surface — a
+   ;; standalone simulated DoIP entity that resets away its link, so the
+   ;; reconnect policy and the post-reset behavior are exercised too.
+   (define remote-server
+     (start-simulated-doip-server #:close-on-reset? #t
+                                  #:refuse-seconds 2
+                                  #:enable-discovery #f))
+   (define remote-port (simulated-doip-server-listen-port remote-server))
+   (define remote-plan
+     (path->string (build-path test-directory ".." "examples" "plan.sim.json")))
+   (define connection
+     (jsexpr->string
+      (hasheq 'host "127.0.0.1" 'port remote-port
+              'tester "0x0E00" 'ecu "0x0E10"
+              'reconnectAttempts 6 'reconnectDelayMs 300)))
+   (define-values (remote-flash remote-error)
+     (call-rpc "flash-plan-remote" remote-plan connection))
+   (check-false remote-error)
+   (define remote-json (string->jsexpr remote-flash))
+   (check-equal? (hash-ref remote-json 'ok) #t)
+   (check-equal? (hash-ref remote-json 'schema) "flashpilot.report/v1")
+   (check-equal? (hash-ref remote-json 'transport)
+                 (string-append "doip 127.0.0.1:" (number->string remote-port)))
+   (check-equal? (map (lambda (s) (hash-ref s 'step)) (hash-ref remote-json 'steps))
+                 (list "identity" "diagnostic-session" "security-access" "erase"
+                       "download" "verify" "ecu-reset"))
+   (simulated-doip-server-dispose! remote-server)
 
    ;; verify-plan: unreadable file -> distinct recovery kind, no wire error.
    (define unreadable

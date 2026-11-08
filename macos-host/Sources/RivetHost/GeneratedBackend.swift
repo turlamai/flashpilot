@@ -80,6 +80,10 @@ public struct RivetAPI: Sendable {
         let rivetResult = try await client.call("flash-plan", arguments: [encode_String(planPath)])
         return try decode_String(rivetResult)
     }
+    public func flash_plan_remote(planPath: String, connection: String) async throws -> String {
+        let rivetResult = try await client.call("flash-plan-remote", arguments: [encode_String(planPath), encode_String(connection)])
+        return try decode_String(rivetResult)
+    }
     public func verify_plan(planPath: String) async throws -> String {
         let rivetResult = try await client.call("verify-plan", arguments: [encode_String(planPath)])
         return try decode_String(rivetResult)

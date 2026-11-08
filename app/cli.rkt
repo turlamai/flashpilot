@@ -72,7 +72,7 @@
      (define host (or (hash-ref args 'host #f)
                       (fail "validation" "--transport doip requires --host." 2)))
      (make-doip-uds-channel host
-                            (doip-port)
+                            (or (string->number (hash-ref args 'port #f)) (doip-port))
                             (or (string->number
                                  (format "0x~a" (hash-ref args 'tester "0E00")))
                                 #x0E00)
@@ -124,6 +124,8 @@
     "  --transport lin                       simulated LIN (UDS over LIN)\n"
     "  --report <path>                       write a flash report (JSON evidence artifact, failed runs included)\n"
     "  --reconnect N [--reconnect-delay-ms MS]  DoIP: retry on connection drops (ECU reboot windows)\n"
+    "  sim-server [--port N] [--refuse-seconds S]  start a simulated DoIP entity (ECU reboot behavior)
+"
     "\n"
     "Exit codes: 0 ok · 1 flash/assert failed · 2 usage · 3 not found · 4 transport\n")))
 
@@ -302,6 +304,29 @@
                         'responseHex (or (uds-request-result-response-hex result) 'null)))
   (if (uds-request-result-positive result) 0 1))
 
+;; sim-server: a standalone simulated DoIP entity for benches and e2e —
+;; it takes its TCP link down on EcuReset and refuses connections for a
+;; window, mirroring an ECU that reboots into its boot loader. Prints the
+;; listen port as one JSON line and serves until killed.
+(define (cmd-sim-server args)
+  (define refuse-raw (hash-ref args 'refuse-seconds #f))
+  (define refuse (or (and (string? refuse-raw) (string->number refuse-raw)) 3))
+  (define server
+    (start-simulated-doip-server
+     #:close-on-reset? #t
+     #:refuse-seconds refuse
+     #:enable-discovery #f))
+  (print-result (hasheq 'ok #t
+                        'port (simulated-doip-server-listen-port server)
+                        'closeOnReset #t
+                        'refuseSeconds refuse))
+  (flush-output)
+  (with-handlers ([exn:break? (lambda (_) (simulated-doip-server-dispose! server))])
+    ;; Serve until killed; the dispose path closes the listener.
+    (sleep +inf.0))
+  (simulated-doip-server-dispose! server)
+  0)
+
 (define (main argv)
   (cond
     [(null? argv) (usage) 0]
@@ -331,6 +356,7 @@
            [(dtc) (cmd-dtc args)]
            [(request) (cmd-request args)]
            [(udid) (cmd-udid args)]
+         [(sim-server) (cmd-sim-server args)]
            [else (fail "validation" (format "Unknown command: ~a" command) 2)])))
      exit-code]))
 

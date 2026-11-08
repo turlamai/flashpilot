@@ -141,6 +141,23 @@ def main():
             "streamed flash timeline",
             lambda: contains(window, "diagnostic-session") and contains(window, '"step":"identity"'),
         )
+        remote = wait_for(
+            "Flash over DoIP button",
+            lambda: next(
+                (
+                    node
+                    for node in walk(window)
+                    if (node.name or "") == "Flash over DoIP"
+                    and role(node) == "push button"
+                ),
+                None,
+            ),
+        )
+        press(remote)
+        wait_for(
+            "remote flash result over DoIP",
+            lambda: contains(window, '"ok":true') and contains(window, "ecu-reset"),
+        )
     except Exception:
         if application is not None:
             (args.output / "accessibility-failure.json").write_text(
@@ -155,13 +172,14 @@ def main():
         json.dumps(
             {
                 "platform": "linux",
-                "actions": ["press:Validate bench", "press:Flash plan"],
+                "actions": ["press:Validate bench", "press:Flash plan", "press:Flash over DoIP"],
                 "assertions": [
                     "packaged GTK4 frame activated on native Wayland",
                     "Validate bench exposed through AT-SPI",
                     "validation request crossed RVT1 into the simulated ECU backend",
                     "native result contains ok=true",
                     "flash plan executed on the simulated bench through AT-SPI",
+                    "flash executed over DoIP against a resetting simulated ECU",
                 ],
             },
             indent=2,

@@ -23,10 +23,14 @@ struct AppState {
   GtkLabel* flash_timeline{nullptr};
   GtkLabel* dtc{nullptr};
   GtkEntry* plan_path{nullptr};
+  GtkEntry* target_host{nullptr};
+  GtkEntry* target_port{nullptr};
+  GtkEntry* target_reconnect{nullptr};
   GtkButton* refresh_button{nullptr};
   GtkButton* validate_button{nullptr};
   GtkButton* verify_button{nullptr};
   GtkButton* flash_button{nullptr};
+  GtkButton* flash_remote_button{nullptr};
   GtkButton* dtc_button{nullptr};
 
   std::unique_ptr<rivet::linux_runtime::Backend> backend;
@@ -75,6 +79,7 @@ void set_controls_sensitive(bool sensitive) {
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.validate_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.verify_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.flash_button), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(g_state.flash_remote_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.dtc_button), sensitive);
 }
 
@@ -239,6 +244,26 @@ void on_flash_clicked(GtkButton*, gpointer) {
       });
 }
 
+void on_flash_remote_clicked(GtkButton*, gpointer) {
+  if (g_state.api == nullptr) return;
+  gtk_widget_set_sensitive(GTK_WIDGET(g_state.flash_button), FALSE);
+  gtk_label_set_text(g_state.flash, "");
+  gtk_label_set_text(g_state.flash_timeline, "");
+  std::string path = gtk_editable_get_text(GTK_EDITABLE(g_state.plan_path));
+  std::string host = gtk_editable_get_text(GTK_EDITABLE(g_state.target_host));
+  std::string port = gtk_editable_get_text(GTK_EDITABLE(g_state.target_port));
+  std::string reconnect = gtk_editable_get_text(GTK_EDITABLE(g_state.target_reconnect));
+  std::string connection =
+      "{\"host\":\"" + host + "\",\"port\":" + port +
+      ",\"tester\":\"0x0E00\",\"ecu\":\"0x0E10\",\"reconnectAttempts\":" +
+      reconnect + ",\"reconnectDelayMs\":400}";
+  (void)g_state.api->flash_plan_remote_async(
+      std::move(path), std::move(connection),
+      [](rivet_app::Result<std::string> result) {
+        deliver_string(std::move(result), g_state.flash, g_state.flash_button);
+      });
+}
+
 void on_dtc_clicked(GtkButton*, gpointer) {
   if (g_state.api == nullptr) return;
   gtk_widget_set_sensitive(GTK_WIDGET(g_state.dtc_button), FALSE);
@@ -319,6 +344,37 @@ void on_activate(GtkApplication* app, gpointer) {
   auto* flash_box = section("Flash (simulated bench)", &g_state.flash,
                             "Flash plan", &g_state.flash_button,
                             G_CALLBACK(on_flash_clicked));
+  auto* flash_remote = gtk_button_new_with_label("Flash over DoIP");
+  gtk_widget_set_sensitive(flash_remote, FALSE);
+  gtk_widget_set_hexpand(flash_remote, TRUE);
+  g_signal_connect(flash_remote, "clicked",
+                   G_CALLBACK(on_flash_remote_clicked), nullptr);
+  gtk_box_append(GTK_BOX(flash_box), flash_remote);
+  g_state.flash_remote_button = GTK_BUTTON(flash_remote);
+  auto* target_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  auto* host_entry = gtk_entry_new();
+  gtk_editable_set_text(GTK_EDITABLE(host_entry), "127.0.0.1");
+  gtk_accessible_update_property(GTK_ACCESSIBLE(host_entry),
+                                 GTK_ACCESSIBLE_PROPERTY_LABEL, "Target host", -1);
+  auto* port_entry = gtk_entry_new();
+  {
+    const char* env_port = g_getenv("FLASHPILOT_SIM_DOIP_PORT");
+    gtk_editable_set_text(GTK_EDITABLE(port_entry),
+                          env_port != nullptr ? env_port : "13400");
+  }
+  gtk_accessible_update_property(GTK_ACCESSIBLE(port_entry),
+                                 GTK_ACCESSIBLE_PROPERTY_LABEL, "Target port", -1);
+  auto* reconnect_entry = gtk_entry_new();
+  gtk_editable_set_text(GTK_EDITABLE(reconnect_entry), "6");
+  gtk_accessible_update_property(GTK_ACCESSIBLE(reconnect_entry),
+                                 GTK_ACCESSIBLE_PROPERTY_LABEL, "Reconnect attempts", -1);
+  gtk_box_append(GTK_BOX(target_row), host_entry);
+  gtk_box_append(GTK_BOX(target_row), port_entry);
+  gtk_box_append(GTK_BOX(target_row), reconnect_entry);
+  g_state.target_host = GTK_ENTRY(host_entry);
+  g_state.target_port = GTK_ENTRY(port_entry);
+  g_state.target_reconnect = GTK_ENTRY(reconnect_entry);
+  gtk_box_append(GTK_BOX(flash_box), target_row);
   auto* timeline = gtk_label_new("");
   gtk_label_set_xalign(GTK_LABEL(timeline), 0.0f);
   gtk_label_set_wrap(GTK_LABEL(timeline), TRUE);

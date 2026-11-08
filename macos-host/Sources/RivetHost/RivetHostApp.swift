@@ -172,6 +172,15 @@ final class AppModel: ObservableObject {
     @Published var flashResult = ""
     @Published var flashLines: [String] = []
     @Published var busy = false
+    @Published var targetHost = "127.0.0.1"
+    @Published var targetPort: String
+    @Published var targetReconnect = "6"
+    @Published var remoteFlashResult = 
+
+    init() {
+        let env = ProcessInfo.processInfo.environment["FLASHPILOT_SIM_DOIP_PORT"]
+        targetPort = env ?? "13400"
+    }
 
     private var backend: EmbeddedRacketBackend?
 
@@ -307,6 +316,46 @@ final class AppModel: ObservableObject {
                 flashResult = try await api.flash_plan(planPath: path)
             } catch {
                 flashResult = "Error: \(error)"
+            }
+        }
+    }
+
+    var remoteFlashSummary: String {
+        guard case .ready = phase, !remoteFlashResult.isEmpty else { return "" }
+        return remoteFlashResult.contains("\"ok\":true")
+            ? "Flash over DoIP completed. See the audited steps."
+            : "The DoIP flash did not complete. See the failure evidence."
+    }
+
+    func flashRemote() {
+        guard let backend, phase == .ready, !busy else { return }
+        let planURL = pickedPlanURL
+            ?? fixturesDirectory?.appendingPathComponent("plan.sim.json")
+        guard let planURL else {
+            remoteFlashResult = "Error: no plan available (no picked plan and no bundled fixtures)."
+            return
+        }
+        busy = true
+        flashLines = []
+        let planPath = (planURL.path as NSString).expandingTildeInPath
+        let connection: [String: Any] = [
+            "host": targetHost, "port": Int(targetPort) ?? 13400,
+            "tester": "0x0E00", "ecu": "0x0E10",
+            "reconnectAttempts": Int(targetReconnect) ?? 6,
+            "reconnectDelayMs": 400,
+        ]
+        let connectionJSON = String(
+            data: try! JSONSerialization.data(withJSONObject: connection),
+            encoding: .utf8) ?? "{}"
+        Task {
+            defer { busy = false }
+            do {
+                let api = RivetAPI(client: backend.client)
+                remoteFlashResult = try await api.flash_plan_remote(
+                    planPath: planPath,
+                    connection: connectionJSON)
+            } catch {
+                remoteFlashResult = "Error: \(error)"
             }
         }
     }
