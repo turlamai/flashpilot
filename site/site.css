@@ -1,0 +1,110 @@
+/* ============================================================
+   FlashPilot site.css — per-site sections only.
+   Shared frame lives in family.css (site-kit); do not duplicate.
+   ============================================================ */
+
+/* ---------- Hero availability line ---------- */
+.hero-availability {
+    margin: 26px auto 0;
+    max-width: 62ch;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--kit-text-2);
+}
+
+/* ---------- Emoji card icons (kept from the previous page) ---------- */
+.kit-card-icon.emoji {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+}
+
+/* ---------- Step code blocks ---------- */
+.step-code {
+    margin: 14px 0 0;
+    background: #1E1E22;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--kit-radius-m);
+    padding: 14px 16px;
+    overflow-x: auto;
+}
+.step-code code {
+    font-family: var(--kit-font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.86);
+    white-space: pre;
+}
+
+/* ---------- Download cards ---------- */
+.card-cta { margin: 16px 0 0; }
+.card-cta .kit-btn { display: inline-flex; }
+
+.platform-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 14px;
+}
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    border: 1px solid var(--kit-border);
+    background: var(--kit-surface);
+    color: var(--kit-text-2);
+}
+.chip.ok {
+    border-color: var(--kit-accent);
+    color: var(--kit-accent-strong);
+    background: var(--kit-accent-soft);
+}
+html[data-theme="dark"] .chip.ok { color: var(--kit-accent); }
+
+/* ---------- Roadmap ---------- */
+.roadmap-list {
+    margin: 36px 0 0;
+    padding: 0;
+    list-style: none;
+    max-width: 720px;
+}
+.roadmap-list li {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    padding: 13px 4px;
+    border-bottom: 1px solid var(--kit-border);
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--kit-text-2);
+}
+.roadmap-list li:last-child { border-bottom: none; }
+.roadmap-list strong {
+    flex: none;
+    font-family: var(--kit-font-mono);
+    color: var(--kit-accent-strong);
+}
+html[data-theme="dark"] .roadmap-list strong { color: var(--kit-accent); }
+
+/* ---------- Adoption prose ---------- */
+.adoption-prose { max-width: var(--kit-prose-width); margin-top: 30px; }
+.adoption-status {
+    font-weight: 600;
+    color: var(--kit-text);
+}
+.adoption-limits { color: var(--kit-text-2); }
+.start-links a {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--kit-accent-strong);
+}
+html[data-theme="dark"] .start-links a { color: var(--kit-accent); }
+.start-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Icon visibility per theme ---------- */
+html[data-theme="light"] .kit-icon-moon { display: none; }
+html[data-theme="dark"] .kit-icon-sun { display: none; }
