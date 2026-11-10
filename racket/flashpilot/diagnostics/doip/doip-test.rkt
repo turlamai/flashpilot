@@ -39,6 +39,8 @@
                                      8000
                                      200)
                     #f
+                    #f
+                    #f
                     #f))
 
   (test-case "doip channel reconnects after a reset drops the link"

@@ -48,7 +48,9 @@
                   routine-steps
                   post-reset-gate
                   on-fail
-                  power-guard)
+                  power-guard
+                  address-length
+                  pre-erase-bytes)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -300,6 +302,31 @@
                    args-raw
                    ma-raw)))
 
+;; addressLength: fixed-width address encoding for RequestDownload and
+;; the routine records. Default (#f): minimal encoding per address value.
+;; Some ECUs declare an exact format (typically 4-byte) and reject
+;; shorter encodings.
+(define (parse-address-length raw)
+  (cond
+    [(not raw) #f]
+    [(and (exact-integer? raw) (<= 1 raw 8)) raw]
+    [else
+     (raise-validation
+      (format "addressLength must be an integer 1..8 (got '~a')." raw))]))
+
+;; preEraseBytes: transfer exactly this many leading image bytes (a
+;; session manifest the ECU validates) after RequestDownload but BEFORE
+;; the erase; the remaining bytes stream after the erase completes.
+;; Requires a single segment - the split only makes sense for one linear
+;; download session.
+(define (parse-pre-erase-bytes raw)
+  (cond
+    [(not raw) #f]
+    [(and (exact-integer? raw) (> raw 0)) raw]
+    [else
+     (raise-validation
+      (format "preEraseBytes must be an integer > 0 (got '~a')." raw))]))
+
 (define (read-flash-plan-json text)
   (define doc
     (with-handlers ([exn:fail? (lambda (e)
@@ -368,7 +395,9 @@
                     (let ([raw (hash-ref doc 'postResetGate #f)])
                       (and raw (parse-post-reset-gate raw)))
                     on-fail
-                    power-guard))
+                    power-guard
+                    (parse-address-length (hash-ref doc 'addressLength #f))
+                    (parse-pre-erase-bytes (hash-ref doc 'preEraseBytes #f))))
   ;; dataLength opts the transport into CAN FD (8 = classic; any other
   ;; value snaps up to the nearest legal FD length). DoIP ignores it.
   (define data-length

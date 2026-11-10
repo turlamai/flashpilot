@@ -63,6 +63,15 @@
                        [i (in-naturals)])
               (bitwise-and (+ b i 1) #xFF)))))
 
+;; constant:<hex> — a fixed key regardless of seed. Development benches
+;; commonly pin a constant key; the hex travels in the plan (reviewable,
+;; never hidden), so weak policies stay visible rather than obscure.
+(define (constant-deriver-from-name name)
+  (and (string-prefix? name "constant:")
+       (let* ([hex (substring name 9)]
+              [bytes (hex-parse hex)])
+         (lambda (_seed) bytes))))
+
 (define (make-key-derivers [extra #f])
   (define base (key-derivers-builtin))
   (if (and extra (> (hash-count extra) 0))
@@ -95,8 +104,8 @@
 (define (engine-timing plan)
   (uds-timing (uds-flash-plan-p2-timeout-ms plan) (uds-flash-plan-p2-star-timeout-ms plan)))
 
-(define (encode-routine-address-and-size address size)
-  (define address-size (uds-address-length address))
+(define (encode-routine-address-and-size address size #:address-length [address-length #f])
+  (define address-size (or address-length (uds-address-length address)))
   (append (for/list ([shift (in-range (* (sub1 address-size) 8) -1 -8)])
             (bitwise-and (arithmetic-shift address (- shift)) #xFF))
           (for/list ([shift (in-range 24 -1 -8)])
@@ -320,6 +329,7 @@
       (define deriver
         (and deriver-name
              (or (hash-ref (flash-engine-key-derivers engine) deriver-name #f)
+                 (constant-deriver-from-name deriver-name)
                  (resolve-key-deriver deriver-name))))
       (unless deriver
         (fail! (format "Plan references key deriver '~a' but no such deriver is registered."
@@ -352,119 +362,152 @@
     (run-routine-steps! client plan add-step! fail!
                         'before-erase "pre-routine" #:cancel cancel)
 
-    ;; 3. Erase per segment — single-shot by default; when the plan pins
-    ;; erasePoll, repeat routine-start (same record — slice-erase ECUs
-    ;; track the window internally) until the status byte reports done,
-    ;; at most max-rounds rounds.
+    ;; 3+4. Erase and download. Two shapes:
+    ;;   default       - erase every segment, then download every segment.
+    ;;   preEraseBytes - one linear session on a single segment: open it,
+    ;;       stream the leading manifest bytes, erase, stream the rest.
+    ;;       ECUs that validate a session manifest before flash is
+    ;;       destroyed reject any erase that arrives first.
     (check-power!)
-    (let ([sw (now-millis)]
-          [poll (uds-flash-plan-erase-poll plan)])
-      (define starts 0)
-      (for ([seg (in-list (uds-flash-plan-segments plan))])
-        (define record
-          (encode-routine-address-and-size
-           (uds-flash-segment-address seg)
-           (length (uds-flash-segment-data seg))))
-        (let erase-loop ([round 1])
-          (set! starts (add1 starts))
-          (define response
-            (uds-require-positive client
-                                  (uds-routine-control routine-start
-                                                       (uds-flash-plan-erase-routine-id plan)
-                                                       record)
-                                  #:timing (if poll
-                                               (uds-timing
-                                                (erase-poll-round-timeout-ms poll)
-                                                (uds-flash-plan-p2-star-timeout-ms plan))
-                                               (engine-timing plan))
-                                  #:cancel cancel))
-          (define routine-id (bitwise-ior (arithmetic-shift (second response) 8) (third response)))
-          (when (or (< (length response) 4)
-                    (not (= (first response) routine-start))
-                    (not (= routine-id (uds-flash-plan-erase-routine-id plan))))
-            (fail! (format "Erase routine response mismatch (got ~a)." (bytes->hex response))))
-          (when poll
-            ;; Payload after the SID echoes [kind, id-hi, id-lo, status].
-            (define status (if (>= (length response) 4) (fourth response) #f))
-            (cond
-              [(and status (= status (erase-poll-status-byte poll))) (void)]
-              [(< round (erase-poll-max-rounds poll)) (erase-loop (add1 round))]
-              [else
-               (fail! (format "Erase did not reach status 0x~a within ~a start(s) (last status ~a)."
-                              (hex-up (erase-poll-status-byte poll) 2)
-                              (erase-poll-max-rounds poll)
-                              (if status (format "0x~a" (hex-up status 2)) "absent")))]))))
+    (define pre (uds-flash-plan-pre-erase-bytes plan))
+    (define addr-len (uds-flash-plan-address-length plan))
+    (define max-block-payload (uds-flash-plan-max-block-payload plan))
+    (define erase-poll (uds-flash-plan-erase-poll plan))
+    (define erase-starts 0)
+    (define erase-sw 0)
+    (define download-sw (now-millis))
+    (when (and pre (> (length (uds-flash-plan-segments plan)) 1))
+      (fail! "preEraseBytes requires a single-segment plan (one linear download session)."))
+    (define (next-seq s) (let ([n (add1 s)]) (if (zero? n) 1 n)))
+    ;; Streams data[from, to) in max-block-payload chunks (power-guard
+    ;; checked per chunk); returns the next block sequence number.
+    (define (stream-range data from to seq0)
+      (let loop ([off from] [seq seq0])
+        (if (>= off to)
+            seq
+            (let* ([chunk-size (min (- to off) max-block-payload)]
+                   [chunk (take (drop data off) chunk-size)])
+              (check-power!)
+              (uds-require-positive client
+                                    (uds-transfer-data seq chunk)
+                                    #:timing (engine-timing plan)
+                                    #:cancel cancel)
+              (loop (+ off chunk-size) (next-seq seq))))))
+    (define (open-download-session! seg)
+      (define payload
+        (uds-require-positive client
+                              (uds-request-download (uds-flash-segment-address seg)
+                                                    (length (uds-flash-segment-data seg))
+                                                    #:address-length addr-len)
+                              #:timing (engine-timing plan)
+                              #:cancel cancel))
+      (when (< (length payload) 2)
+        (fail! "RequestDownload response malformed."))
+      (define size-bytes (bitwise-and (first payload) #x0F))
+      (set! max-block-payload
+            (min max-block-payload
+                 (max 2
+                      (- (for/fold ([acc 0])
+                                   ([i (in-range 1 (add1 size-bytes))]
+                                    #:break (>= i (length payload)))
+                           (bitwise-ior (arithmetic-shift acc 8) (list-ref payload i)))
+                         2)))))
+    (define (erase-segment! seg)
+      (define record
+        (encode-routine-address-and-size
+         (uds-flash-segment-address seg)
+         (length (uds-flash-segment-data seg))
+         #:address-length addr-len))
+      (let erase-loop ([round 1])
+        (set! erase-starts (add1 erase-starts))
+        (define response
+          (uds-require-positive client
+                                (uds-routine-control routine-start
+                                                     (uds-flash-plan-erase-routine-id plan)
+                                                     record)
+                                #:timing (if erase-poll
+                                             (uds-timing
+                                              (erase-poll-round-timeout-ms erase-poll)
+                                              (uds-flash-plan-p2-star-timeout-ms plan))
+                                             (engine-timing plan))
+                                #:cancel cancel))
+        (define routine-id (bitwise-ior (arithmetic-shift (second response) 8) (third response)))
+        (when (or (< (length response) 4)
+                  (not (= (first response) routine-start))
+                  (not (= routine-id (uds-flash-plan-erase-routine-id plan))))
+          (fail! (format "Erase routine response mismatch (got ~a)." (bytes->hex response))))
+        (when erase-poll
+          ;; Payload after the SID echoes [kind, id-hi, id-lo, status].
+          (define status (if (>= (length response) 4) (fourth response) #f))
+          (cond
+            [(and status (= status (erase-poll-status-byte erase-poll))) (void)]
+            [(< round (erase-poll-max-rounds erase-poll)) (erase-loop (add1 round))]
+            [else
+             (fail! (format "Erase did not reach status 0x~a within ~a start(s) (last status ~a)."
+                            (hex-up (erase-poll-status-byte erase-poll) 2)
+                            (erase-poll-max-rounds erase-poll)
+                            (if status (format "0x~a" (hex-up status 2)) "absent")))]))))
+    (define (audit-erase!)
       (add-step! (flash-step-summary "erase"
                                      #t
-                                     (if poll
+                                     (if erase-poll
                                          (format "~a segment(s) erased via routine 0x~a in ~a start(s)."
                                                  (length (uds-flash-plan-segments plan))
                                                  (hex-up (uds-flash-plan-erase-routine-id plan) 4)
-                                                 starts)
+                                                 erase-starts)
                                          (format "~a segment(s) erased via routine 0x~a."
                                                  (length (uds-flash-plan-segments plan))
                                                  (hex-up (uds-flash-plan-erase-routine-id plan) 4)))
-                                     (/ (- (now-millis) sw) 1.0)
+                                     (/ (- (now-millis) erase-sw) 1.0)
                                      #f)))
 
-    ;; 4. Per-segment download.
-    (for ([seg (in-list (uds-flash-plan-segments plan))])
-      (let ([sw (now-millis)]
-            [data (uds-flash-segment-data seg)]
-            [retries 0])
-        (define payload
-          (uds-require-positive client
-                                (uds-request-download (uds-flash-segment-address seg) (length data))
-                                #:timing (engine-timing plan)
-                                #:cancel cancel))
-        (when (< (length payload) 2)
-          (fail! "RequestDownload response malformed."))
-        (define size-bytes (bitwise-and (first payload) #x0F))
-        (define max-block-length
-          (for/fold ([acc 0])
-                    ([i (in-range 1 (add1 size-bytes))]
-                     #:break (>= i (length payload)))
-            (bitwise-ior (arithmetic-shift acc 8) (list-ref payload i))))
-        (define max-block-payload
-          (min (uds-flash-plan-max-block-payload plan) (max 2 (- max-block-length 2))))
-        (let loop ([offset 0]
-                   [block-sequence #x01])
-          (when (< offset (length data))
-            (define chunk-size (min (- (length data) offset) max-block-payload))
-            (check-power!)
-            (define retry-current
-              (with-handlers ([exn:fail:uds? (lambda (e)
-                                               (if (< retries (uds-flash-plan-block-retries plan))
-                                                   (begin
-                                                     (set! retries (add1 retries))
-                                                     #t)
-                                                   (raise e)))])
-                (uds-require-positive client
-                                      (uds-transfer-data block-sequence
-                                                         (take (list-tail data offset) chunk-size))
-                                      #:timing (engine-timing plan)
-                                      #:cancel cancel)
-                #f))
-            (if retry-current
-                (loop offset block-sequence)
-                (let ([next (+ offset chunk-size)]
-                      [next-seq (let ([s (add1 block-sequence)]) (if (zero? s) 1 s))])
-                  (loop next next-seq)))))
-        (uds-require-positive client
-                              (uds-request-transfer-exit)
-                              #:timing (engine-timing plan)
-                              #:cancel cancel)
-        (add-step! (flash-step-summary "download"
-                                       #t
-                                       (format "segment @0x~a: ~a bytes, ~aB blocks~a"
-                                               (hex-up (uds-flash-segment-address seg) 8)
-                                               (length data)
-                                               max-block-payload
-                                               (if (> retries 0)
-                                                   (format ", ~a retried block(s)" retries)
-                                                   ""))
-                                       (/ (- (now-millis) sw) 1.0)
-                                       #f))))
+    (cond
+      [pre
+       ;; Manifest-first: one segment, one session, split around the erase.
+       (define seg (first (uds-flash-plan-segments plan)))
+       (define data (uds-flash-segment-data seg))
+       (when (> pre (length data))
+         (fail! (format "preEraseBytes ~a exceeds the image size ~a." pre (length data))))
+       (open-download-session! seg)
+       (define seq-after-window (stream-range data 0 pre #x01))
+       (set! erase-starts 0)
+       (erase-segment! seg)
+       (audit-erase!)
+       (stream-range data pre (length data) seq-after-window)
+       (uds-require-positive client
+                             (uds-request-transfer-exit)
+                             #:timing (engine-timing plan)
+                             #:cancel cancel)
+       (add-step! (flash-step-summary "download"
+                                      #t
+                                      (format "segment @0x~a: ~a bytes, ~aB blocks, ~a byte(s) streamed pre-erase"
+                                              (hex-up (uds-flash-segment-address seg) 8)
+                                              (length data)
+                                              max-block-payload
+                                              pre)
+                                      (/ (- (now-millis) download-sw) 1.0)
+                                      #f))]
+      [else
+       ;; Default: erase every segment, then download every segment.
+       (for ([seg (in-list (uds-flash-plan-segments plan))])
+         (erase-segment! seg))
+       (audit-erase!)
+       (for ([seg (in-list (uds-flash-plan-segments plan))])
+         (define sw (now-millis))
+         (open-download-session! seg)
+         (stream-range (uds-flash-segment-data seg) 0 (length (uds-flash-segment-data seg)) #x01)
+         (uds-require-positive client
+                               (uds-request-transfer-exit)
+                               #:timing (engine-timing plan)
+                               #:cancel cancel)
+         (add-step! (flash-step-summary "download"
+                                        #t
+                                        (format "segment @0x~a: ~a bytes, ~aB blocks"
+                                                (hex-up (uds-flash-segment-address seg) 8)
+                                                (length (uds-flash-segment-data seg))
+                                                max-block-payload)
+                                        (/ (- (now-millis) sw) 1.0)
+                                        #f)))])
 
     ;; 4b. powerGuard audit summary for the destructive phase.
     (when guard

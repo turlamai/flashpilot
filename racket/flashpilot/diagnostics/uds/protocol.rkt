@@ -230,8 +230,10 @@
 (define (uds-request-download address
                               length*
                               #:compression [compression #x00]
-                              #:encryption [encryption #x00])
-  (define address-size (uds-address-length address))
+                              #:encryption [encryption #x00]
+                              #:address-length [address-length #f])
+  (define address-size
+    (or address-length (uds-address-length address)))
   (append (list sid-request-download
                 (bitwise-ior (arithmetic-shift compression 4) encryption)
                 (bitwise-ior (arithmetic-shift address-size 4) #x04))

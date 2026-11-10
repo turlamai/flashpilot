@@ -33,6 +33,8 @@
                     '()
                     #f
                     #f
+                    #f
+                    #f
                     #f))
 
   (define (identity-plan-for image checks)
