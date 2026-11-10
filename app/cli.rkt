@@ -62,6 +62,15 @@
   (and (pair? p) (< index (length p)) (list-ref p index)))
 
 ;; ----------------------------------------------------------------------------
+;; Identity
+;; ----------------------------------------------------------------------------
+
+;; Product version, a literal like app/backend.rkt's bench-status and
+;; racket/info.rkt; scripts/check-release-version.sh pins all of them (and
+;; the CHANGELOG, rivet.rktd and VERSION) to one release version.
+(define cli-version "0.2.0")
+
+;; ----------------------------------------------------------------------------
 ;; Channel: sim ECU by default; DoIP with --transport doip --host H
 ;; ----------------------------------------------------------------------------
 
@@ -137,6 +146,7 @@
     "Options:\n"
     "  --transport doip --host H [--port N]  DoIP transport (default sim ECU)\n"
     "  --transport lin                       simulated LIN (UDS over LIN)\n"
+    "  --version                             print the release version (one JSON line)\n"
     "  --report <path>                       write a flash report (JSON evidence artifact, failed runs included)\n"
     "  --reconnect N [--reconnect-delay-ms MS]  DoIP: retry on connection drops (ECU reboot windows)\n"
     "  sim-server [--port N] [--refuse-seconds S]  start a simulated DoIP entity (ECU reboot behavior)
@@ -342,10 +352,17 @@
   (simulated-doip-server-dispose! server)
   0)
 
+;; --version: identity only — no channel, no device, no network. One JSON
+;; object on stdout per the CLI contract, exit 0.
+(define (cmd-version)
+  (print-result (hasheq 'ok #t 'product "FlashPilot" 'version cli-version))
+  0)
+
 (define (main argv)
   (cond
     [(null? argv) (usage) 0]
     [(member (car argv) '("-h" "--help" "help")) (usage) 0]
+    [(member (car argv) '("-v" "--version" "version")) (cmd-version)]
     [else
      (define command (string->symbol (string-downcase (car argv))))
      (define args (args->hash (cdr argv)))

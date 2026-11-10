@@ -88,6 +88,7 @@ racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1
 | `dtc read \| clear` | diagnostic trouble codes (UDS 0x19 / 0x14) |
 | `request <hex>` | one raw UDS request |
 | `udid <did>` | read a DID (22 XX XX) |
+| `--version` (also `-v`, `version`) | version identity as one JSON line (`ok`, `product`, `version`) — no transport, exits 0 |
 
 Exit codes: `0` ok · `1` flash/assert failed · `2` usage · `3` not found · `4` transport.
 
