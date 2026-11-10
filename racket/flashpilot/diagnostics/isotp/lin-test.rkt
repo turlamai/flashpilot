@@ -67,6 +67,7 @@
                                  #f
                                  #f
                                  #f
+                                 #f
                                  #f))
     (define result (lin-channel-flash channel plan))
     (check-true (uds-flash-result-ok result))

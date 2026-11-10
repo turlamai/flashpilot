@@ -521,10 +521,17 @@
                   (elapsed-ms)
                   #f)))
 
-    ;; 5. Verify via CRC32 routine.
+    ;; 5. Verify via CRC32 routine — the plan may pin an explicit
+    ;; package-level CRC (ECUs whose CheckDataIntegrity compares a
+    ;; packer-computed value rather than the byte-stream CRC).
     (check-power!)
     (let ([sw (now-millis)])
-      (define crc (crc32-compute (uds-flash-plan-segments plan)))
+      (define pinned (uds-flash-plan-verify-crc32 plan))
+      (define crc
+        (if pinned
+            (for/fold ([acc 0]) ([b (in-list pinned)])
+              (bitwise-ior (arithmetic-shift acc 8) b))
+            (crc32-compute (uds-flash-plan-segments plan))))
       (define response
         (uds-require-positive client
                               (uds-routine-control routine-start

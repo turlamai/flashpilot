@@ -50,7 +50,8 @@
                   on-fail
                   power-guard
                   address-length
-                  pre-erase-bytes)
+                  pre-erase-bytes
+                  verify-crc32)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -319,6 +320,23 @@
 ;; the erase; the remaining bytes stream after the erase completes.
 ;; Requires a single segment - the split only makes sense for one linear
 ;; download session.
+;; verifyCrc32: explicit package-level CRC for the verify routine — for
+;; ECUs whose CheckDataIntegrity expects a package CRC that is not the
+;; engine's own byte-stream computation (e.g. a header-fields CRC the
+;; packer computes). Hex string, parsed big-endian into the 4-byte
+;; routine record. Default (#f): engine-computed CRC32 over segments.
+(define (parse-verify-crc32 raw)
+  (cond
+    [(not raw) #f]
+    [(and (string? raw) (string-prefix? (string-downcase raw) "0x"))
+     (define b (hex-parse (substring raw 2)))
+     (unless (= (length b) 4)
+       (raise-validation
+        (format "verifyCrc32 must be exactly 4 bytes (got ~a)." (length b))))
+     b]
+    [else
+     (raise-validation "verifyCrc32 must be a 0x-prefixed 4-byte hex string.")]))
+
 (define (parse-pre-erase-bytes raw)
   (cond
     [(not raw) #f]
@@ -397,7 +415,8 @@
                     on-fail
                     power-guard
                     (parse-address-length (hash-ref doc 'addressLength #f))
-                    (parse-pre-erase-bytes (hash-ref doc 'preEraseBytes #f))))
+                    (parse-pre-erase-bytes (hash-ref doc 'preEraseBytes #f))
+                    (parse-verify-crc32 (hash-ref doc 'verifyCrc32 #f))))
   ;; dataLength opts the transport into CAN FD (8 = classic; any other
   ;; value snaps up to the nearest legal FD length). DoIP ignores it.
   (define data-length
