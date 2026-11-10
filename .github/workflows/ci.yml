@@ -28,6 +28,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - name: Release version gate (VERSION == CHANGELOG == rivet.rktd == info.rkt == backend == CLI)
+        shell: bash
+        run: bash scripts/check-release-version.sh
       - name: Setup Racket
         uses: Bogdanp/setup-racket@v1.15
         with:
@@ -49,6 +52,8 @@ jobs:
         run: raco test racket/flashpilot
       - name: Offline signed CLI update trust tests (no release secrets)
         run: raco test tests/update-policy-test.rkt
+      - name: CLI identity contract tests (--version, exit codes)
+        run: raco test tests/cli-test.rkt
       - name: Sign five synthetic CLI archives and reject wrong trust key
         run: raco test tests/sign-cli-update-manifest-test.rkt
       - name: Compile signed CLI manifest publisher
