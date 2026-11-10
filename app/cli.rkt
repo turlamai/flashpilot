@@ -66,34 +66,43 @@
 ;; ----------------------------------------------------------------------------
 
 (define (make-channel args #:data-length [data-length 8])
+  ;; args->hash stores option values as strings; case datums here must be
+  ;; strings too — symbol datums silently fall through to the sim channel.
   (case (hash-ref args 'transport #f)
-    [(lin) (make-lin-uds-channel)]
-    [(doip)
+    [("lin") (make-lin-uds-channel)]
+    [("doip")
      (define host (or (hash-ref args 'host #f)
                       (fail "validation" "--transport doip requires --host." 2)))
-     (make-doip-uds-channel host
-                            (or (string->number (hash-ref args 'port #f)) (doip-port))
-                            (or (string->number
-                                 (format "0x~a" (hash-ref args 'tester "0E00")))
-                                #x0E00)
-                            (or (string->number
-                                 (format "0x~a" (hash-ref args 'ecu "0E10")))
-                                #x0E10)
-                            #:reconnect-attempts
-                            (or (string->number (hash-ref args 'reconnect #f)) 0)
-                            #:reconnect-delay-ms
-                            (or (string->number (hash-ref args 'reconnect-delay-ms #f)) 1000))]
+     ;; Hex-word options accept 0x-prefixed strings (addresses/IDs are
+     ;; conventionally written 0x...); plain decimals keep base 10.
+     (define (opt-number key default)
+       (define v (hash-ref args key #f))
+       (cond
+         [(not (string? v)) default]
+         [(string-prefix? (string-downcase v) "0x")
+          (or (string->number (substring v 2) 16) default)]
+         [else (or (string->number v) default)]))
+     (let ([port (opt-number 'port doip-port)]
+           [tester (opt-number 'tester #x0E00)]
+           [ecu (opt-number 'ecu #x0E10)]
+           [reconnect (opt-number 'reconnect 0)]
+           [reconnect-delay (opt-number 'reconnect-delay-ms 1000)])
+       (make-doip-uds-channel host port tester ecu
+                              #:reconnect-attempts reconnect
+                              #:reconnect-delay-ms reconnect-delay))]
     [else (make-sim-uds-channel #:data-length data-length)]))
 
 (define (channel-request ch request)
-  (if (sim-uds-channel? ch)
-      (sim-channel-request ch request 1000 5000)
-      (can-uds-channel-request ch request 1000 5000)))
+  (cond
+    [(sim-uds-channel? ch) (sim-channel-request ch request 1000 5000)]
+    [(doip-uds-channel? ch) (doip-uds-channel-request ch request 1000 5000)]
+    [else (can-uds-channel-request ch request 1000 5000)]))
 
 (define (channel-flash ch plan)
-  (if (sim-uds-channel? ch)
-      (sim-channel-flash ch plan)
-      (can-uds-channel-flash ch plan)))
+  (cond
+    [(sim-uds-channel? ch) (sim-channel-flash ch plan)]
+    [(doip-uds-channel? ch) (doip-uds-channel-flash ch plan)]
+    [else (can-uds-channel-flash ch plan)]))
 
 (define (transport-label ch)
   (if (sim-uds-channel? ch)
