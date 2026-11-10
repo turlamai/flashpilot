@@ -22,7 +22,8 @@
          make-flash-engine
          flash-execute
          make-key-derivers
-         key-derivers-builtin)
+         key-derivers-builtin
+         adopt-max-block-length)
 
 ;; ----------------------------------------------------------------------------
 ;; CRC32 (IEEE, reflected, 0xEDB88320)
@@ -111,6 +112,24 @@
           (for/list ([shift (in-range 24 -1 -8)])
             (bitwise-and (arithmetic-shift size (- shift)) #xFF))))
 
+;; Adopt the ECU's maxNumberOfBlockLength from a positive 0x34 response,
+;; but only when the response is plausible. The low nibble of the length
+;; format identifier declares how many bytes carry the block length; a
+;; declared length of zero (observed on a bench ECU answering
+;; 50 40 00 00 0F FF) is bogus — adopting it would collapse the transfer
+;; to 2-byte blocks, so the plan's value stands instead. A parsed block
+;; length below 3 bytes cannot even carry SID + sequence + 1 data byte,
+;; and is rejected for the same reason.
+(define (adopt-max-block-length plan-max payload)
+  (define size-bytes (bitwise-and (first payload) #x0F))
+  (if (and (>= size-bytes 1)
+           (<= size-bytes (length (rest payload))))
+      (let ([raw (for/fold ([acc 0])
+                           ([i (in-range 1 (add1 size-bytes))])
+                   (bitwise-ior (arithmetic-shift acc 8) (list-ref payload i)))])
+        (if (>= raw 3) (min plan-max (- raw 2)) plan-max))
+      plan-max))
+
 ;; Generic routine steps (routineSteps plan field): fire RoutineControl
 ;; start with the optional record, require a positive response, and audit
 ;; the raw bytes — vendor status semantics are never interpreted here.
@@ -130,6 +149,11 @@
             (uds-timing (routine-step-timeout-ms step)
                         (uds-flash-plan-p2-star-timeout-ms plan))
             (engine-timing plan)))
+      (define req
+        (uds-routine-control routine-start
+                             (routine-step-routine-id step)
+                             (routine-step-record step)))
+      (wire-trace (format "routine ~a" did-hex) req)
       (define payload
         (with-handlers
             ([exn:fail:uds?
@@ -139,9 +163,7 @@
                        (and (exn:fail:uds-nrc e)
                             (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))])
           (uds-require-positive client
-                                (uds-routine-control routine-start
-                                                     (routine-step-routine-id step)
-                                                     (routine-step-record step))
+                                req
                                 #:timing timing
                                 #:cancel cancel)))
       (add-step!
@@ -152,6 +174,14 @@
                 did-hex (truncate-hex payload))
         (/ (- (now-millis) sw) 1.0)
         #f)))))
+
+(define flash-wire-trace? (getenv "FLASHPILOT_WIRE_TRACE"))
+(define (wire-trace label req-vals)
+  (when flash-wire-trace?
+    (define parts
+      (for/list ([v (in-list req-vals)])
+        (if (bytes? v) (format "~a" (bytes->hex v)) (format "~a" v))))
+    (eprintf "[wire] ~a req=[~a]\n" label (string-join parts " "))))
 
 (define (flash-execute engine plan #:cancel [cancel #f] #:on-step [on-step #f])
   (define started (now-millis))
@@ -378,14 +408,27 @@
     (define download-sw (now-millis))
     (when (and pre (> (length (uds-flash-plan-segments plan)) 1))
       (fail! "preEraseBytes requires a single-segment plan (one linear download session)."))
-    (define (next-seq s) (let ([n (add1 s)]) (if (zero? n) 1 n)))
+    ;; TransferData sequence numbers are one byte wide; 0 is reserved, so
+    ;; the counter cycles 1..255 (matches the bench ECU's expectation and
+    ;; ota.rkt's reference stream).
+    (define (next-seq s) (let ([n (add1 s)]) (if (> n 255) 1 n)))
     ;; Streams data[from, to) in max-block-payload chunks (power-guard
-    ;; checked per chunk); returns the next block sequence number.
+    ;; checked per chunk); returns the next block sequence number. A chunk
+    ;; never crosses a plan-declared split offset (chunkSplitOffsets):
+    ;; some ECUs section their download stream and reject - or silently
+    ;; swallow - blocks that straddle a boundary, leaving the session
+    ;; wedged with nothing but fake ACKs.
+    (define split-offsets (uds-flash-plan-chunk-split-offsets plan))
     (define (stream-range data from to seq0)
       (let loop ([off from] [seq seq0])
         (if (>= off to)
             seq
-            (let* ([chunk-size (min (- to off) max-block-payload)]
+            (let* ([next-split
+                    (for/fold ([best to])
+                              ([b (in-list split-offsets)]
+                               #:when (and (> b off) (< b to)))
+                      (min best b))]
+                   [chunk-size (min (- to off) max-block-payload (- next-split off))]
                    [chunk (take (drop data off) chunk-size)])
               (check-power!)
               (uds-require-positive client
@@ -394,31 +437,42 @@
                                     #:cancel cancel)
               (loop (+ off chunk-size) (next-seq seq))))))
     (define (open-download-session! seg)
+      ;; Tolerate a RequestDownload NRC: some ECUs reject the 0x34 at the
+      ;; DCM layer and arm their session from the first manifest block
+      ;; instead — the window transfer below drives that path. When the
+      ;; request IS positive, adopt the ECU's maxNumberOfBlockLength.
+      (define req34
+        (uds-request-download (uds-flash-segment-address seg)
+                              (length (uds-flash-segment-data seg))
+                              #:address-length addr-len))
+      (wire-trace "34" req34)
       (define payload
-        (uds-require-positive client
-                              (uds-request-download (uds-flash-segment-address seg)
-                                                    (length (uds-flash-segment-data seg))
-                                                    #:address-length addr-len)
-                              #:timing (engine-timing plan)
-                              #:cancel cancel))
-      (when (< (length payload) 2)
-        (fail! "RequestDownload response malformed."))
-      (define size-bytes (bitwise-and (first payload) #x0F))
-      (set! max-block-payload
-            (min max-block-payload
-                 (max 2
-                      (- (for/fold ([acc 0])
-                                   ([i (in-range 1 (add1 size-bytes))]
-                                    #:break (>= i (length payload)))
-                           (bitwise-ior (arithmetic-shift acc 8) (list-ref payload i)))
-                         2)))))
+        (with-handlers
+            ([exn:fail:uds?
+              (lambda (e)
+                (unless (eq? (exn:fail:uds-nrc e) #x13)
+                  (raise e))
+                #f)])
+          (uds-require-positive client
+                                req34
+                                #:timing (engine-timing plan)
+                                #:cancel cancel)))
+      (when payload
+        (when (< (length payload) 2)
+          (fail! "RequestDownload response malformed."))
+        (set! max-block-payload (adopt-max-block-length max-block-payload payload))))
     (define (erase-segment! seg)
       (define record
-        (encode-routine-address-and-size
-         (uds-flash-segment-address seg)
-         (length (uds-flash-segment-data seg))
-         #:address-length addr-len))
+        (or (uds-flash-plan-erase-record plan)
+            (encode-routine-address-and-size
+             (uds-flash-segment-address seg)
+             (length (uds-flash-segment-data seg))
+             #:address-length addr-len)))
       (let erase-loop ([round 1])
+        (wire-trace (format "FF00 round ~a" round)
+                    (uds-routine-control routine-start
+                                         (uds-flash-plan-erase-routine-id plan)
+                                         record))
         (set! erase-starts (add1 erase-starts))
         (define response
           (uds-require-positive client

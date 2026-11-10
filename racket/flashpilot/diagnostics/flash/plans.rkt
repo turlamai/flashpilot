@@ -30,6 +30,7 @@
          uds-flash-hardening-expected-fingerprint
          flash-plan-fingerprint
          identity-json
+         parse-chunk-split-offsets
          read-flash-plan-json
          read-segment-file)
 
@@ -51,7 +52,9 @@
                   power-guard
                   address-length
                   pre-erase-bytes
-                  verify-crc32)
+                  verify-crc32
+                  erase-record
+                  chunk-split-offsets)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -315,6 +318,10 @@
      (raise-validation
       (format "addressLength must be an integer 1..8 (got '~a')." raw))]))
 
+;; eraseRecord: explicit hex bytes for the erase routine record. Default
+;; (#f): the engine encodes (address, size) per the address length. Some
+;; ECUs expect a fixed legacy payload (e.g. 8 zero bytes) and validate
+;; the record at the DCM layer.
 ;; preEraseBytes: transfer exactly this many leading image bytes (a
 ;; session manifest the ECU validates) after RequestDownload but BEFORE
 ;; the erase; the remaining bytes stream after the erase completes.
@@ -344,6 +351,28 @@
     [else
      (raise-validation
       (format "preEraseBytes must be an integer > 0 (got '~a')." raw))]))
+
+;; Payload-stream offsets a TransferData block must not cross. Some ECUs
+;; split their download stream into sections (app / data / cal) and
+;; reject - or worse, silently swallow - a block that straddles one.
+;; Offsets are segment-absolute (0 = first byte of the segment data) and
+;; accept integers or 0x-prefixed hex strings.
+(define (parse-chunk-split-offsets raw)
+  (cond
+    [(not raw) '()]
+    [(list? raw)
+     (for/list ([v (in-list raw)])
+       (cond
+         [(exact-integer? v) v]
+         [(and (string? v) (string-prefix? (string-downcase v) "0x"))
+          (or (string->number (substring v 2) 16)
+              (raise-validation (format "Invalid chunkSplitOffsets entry '~a'." v)))]
+         [(and (string? v) (string->number v)) (string->number v)]
+         [else
+          (raise-validation
+           (format "chunkSplitOffsets entries must be integers (got '~a')." v))]))]
+    [else
+     (raise-validation "chunkSplitOffsets must be a list of offsets.")]))
 
 (define (read-flash-plan-json text)
   (define doc
@@ -416,7 +445,10 @@
                     power-guard
                     (parse-address-length (hash-ref doc 'addressLength #f))
                     (parse-pre-erase-bytes (hash-ref doc 'preEraseBytes #f))
-                    (parse-verify-crc32 (hash-ref doc 'verifyCrc32 #f))))
+                    (parse-verify-crc32 (hash-ref doc 'verifyCrc32 #f))
+                    (let ([raw (hash-ref doc 'eraseRecord #f)])
+                      (and raw (hex-parse raw)))
+                    (parse-chunk-split-offsets (hash-ref doc 'chunkSplitOffsets #f))))
   ;; dataLength opts the transport into CAN FD (8 = classic; any other
   ;; value snaps up to the nearest legal FD length). DoIP ignores it.
   (define data-length

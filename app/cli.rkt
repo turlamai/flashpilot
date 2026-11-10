@@ -105,9 +105,10 @@
     [else (can-uds-channel-flash ch plan)]))
 
 (define (transport-label ch)
-  (if (sim-uds-channel? ch)
-      (sim-channel-transport ch)
-      (channel-transport ch)))
+  (cond
+    [(sim-uds-channel? ch) (sim-channel-transport ch)]
+    [(doip-uds-channel? ch) (doip-channel-transport ch)]
+    [else (channel-transport ch)]))
 
 ;; ----------------------------------------------------------------------------
 ;; Usage

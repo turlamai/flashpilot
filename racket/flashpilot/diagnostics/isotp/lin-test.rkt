@@ -68,7 +68,9 @@
                                  #f
                                  #f
                                  #f
-                                 #f))
+                                 #f
+                                 #f
+                                 '()))
     (define result (lin-channel-flash channel plan))
     (check-true (uds-flash-result-ok result))
     (check-equal? (uds-flash-result-total-bytes result) 40)

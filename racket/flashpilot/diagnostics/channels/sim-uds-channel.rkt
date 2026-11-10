@@ -707,7 +707,9 @@
                     (uds-flash-plan-power-guard spec)
                     (uds-flash-plan-address-length spec)
                     (uds-flash-plan-pre-erase-bytes spec)
-                    (uds-flash-plan-verify-crc32 spec)))
+                    (uds-flash-plan-verify-crc32 spec)
+                    (uds-flash-plan-erase-record spec)
+                    (uds-flash-plan-chunk-split-offsets spec)))
   (with-handlers ([exn:fail:flash? (lambda (e) (exn:fail:flash-execution e))])
     (flash-execute (unbox (can-uds-channel-engine-box c)) plan
                    #:on-step on-step)))

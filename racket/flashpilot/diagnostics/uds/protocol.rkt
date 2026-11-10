@@ -302,8 +302,24 @@
            (uds-response #f sid '() nrc))])))
 
 ;; Positive responses only; negative responses throw with their NRC.
+
+;; Bench bring-up trace of every require-positive exchange
+;; (FLASHPILOT_WIRE_TRACE=1): one line per request/response pair, including
+;; the payload bytes that req-side-only traces never show.
+(define uds-wire-trace? (getenv "FLASHPILOT_WIRE_TRACE"))
+(define (trace-hex vals)
+  (string-join (for/list ([v vals]) (format "~a" (hex2 v))) " "))
+
 (define (uds-require-positive client request #:timing [timing #f] #:cancel [cancel #f])
   (define response (uds-send client request #:timing timing #:cancel cancel))
+  (when uds-wire-trace?
+    (eprintf "[uds] ~a -> ~a\n"
+             (trace-hex request)
+             (if (uds-response-positive response)
+                 (format "+ ~a" (trace-hex (uds-response-payload response)))
+                 (format "- ~a (0x~a)"
+                         (nrc-name (uds-response-nrc response))
+                         (hex2 (uds-response-nrc response))))))
   (if (uds-response-positive response)
       (uds-response-payload response)
       (uds-protocol-error (format "~a rejected: ~a (0x~a)."

@@ -42,7 +42,9 @@
                     #f
                     #f
                     #f
-                    #f))
+                    #f
+                    #f
+                    '()))
 
   (test-case "doip channel reconnects after a reset drops the link"
     (define server
