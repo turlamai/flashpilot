@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlashPilot — Evidence</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== evidence screen ==== */
+  .runs { margin-bottom: 12px; }
+  .runrow .rid { font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+  .runrow .rmeta { font-size: 11.5px; color: var(--mute); margin-top: 2px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 8px 0 10px; border-bottom: 1px solid var(--line); }
+  .meta .m { font-size: 11px; color: var(--mute); }
+  .meta .m .mv { font-family: var(--mono); font-size: 11.5px; color: var(--ink); user-select: text; }
+  .gates { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .steptbl { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .srow { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .srow:last-child { border-bottom: none; }
+  .srow .sic { width: 16px; flex: none; text-align: center; font-weight: 700; font-size: 12px; }
+  .srow.ok .sic { color: var(--ok); }
+  .srow.bad .sic { color: var(--danger); }
+  .srow.na { opacity: .5; }
+  .srow .sn { font-family: var(--mono); font-size: 11.5px; font-weight: 600; }
+  .srow .sr { font-family: var(--mono); font-size: 11px; color: var(--mute); margin-left: auto; text-align: right; user-select: text; }
+  .srow.bad { background: var(--danger-soft); }
+  .srow.bad .sr { color: var(--danger); }
+  .errbox {
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.6; color: var(--danger);
+    background: var(--danger-soft); border-radius: 8px; padding: 10px 12px; margin: 12px 0; user-select: text;
+  }
+  .recov { display: flex; gap: 10px; align-items: flex-start; background: var(--raised); border-radius: 8px; padding: 12px; }
+  .recov .rt { font-size: 12.5px; line-height: 1.5; flex: 1; }
+  .recov .rt b { font-size: 12.5px; }
+  .trace { font-size: 11px; color: var(--mute); margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .trace .mono { user-select: text; }
+</style>
+</head>
+<body>
+  <div class="window" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">FlashPilot — Evidence</div>
+      <div class="sp"></div>
+      <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme">◐</button>
+    </div>
+    <div class="body">
+      <aside class="sidebar">
+        <div class="brand"><div class="mark">FP</div><div class="name">FlashPilot</div></div>
+        <div class="sect">BENCH</div>
+        <nav class="nav">
+          <div class="item"><span class="kb">1</span>Bench</div>
+          <div class="item"><span class="kb">2</span>Plans</div>
+          <div class="item"><span class="kb">3</span>Flash</div>
+          <div class="item active"><span class="kb">4</span>Evidence</div>
+        </nav>
+        <div class="sect">SYSTEM</div>
+        <nav class="nav">
+          <div class="item">⚙ Settings</div>
+        </nav>
+        <div class="foot">
+          <span class="dot"></span><span class="st">Engine ready · v0.2.0</span>
+          <span class="sp"></span><span class="st mono">f14d1af</span>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="head">
+          <div>
+            <h1>Evidence</h1>
+            <div class="sub">Every run writes a flashpilot.report/v1 — failed runs too</div>
+          </div>
+          <div class="sp"></div>
+          <button class="btn">Open folder</button>
+          <button class="btn primary">Export all <kbd>e</kbd></button>
+        </div>
+        <div class="view">
+
+          <div class="panel runs">
+            <div class="panel-h"><span class="tt">Run history</span><span class="sp"></span><span class="note">UTC · newest first</span></div>
+            <div class="row runrow">
+              <span class="rid">FP-2026-1111-0901</span>
+              <span class="rmeta">plan.sim.json · sim · 2026-11-11T09:01:12Z</span>
+              <span class="sp"></span>
+              <span class="rmeta">6/6 steps · 4.21 s</span>
+              <span class="badge ok">passed</span>
+            </div>
+            <div class="row runrow selected">
+              <span class="rid">FP-2026-1111-1158</span>
+              <span class="rmeta">plan.sim-fd.json · sim-fd · 2026-11-11T11:58:47Z</span>
+              <span class="sp"></span>
+              <span class="rmeta">erase failed · round 12/12</span>
+              <span class="badge danger">failed</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Report — FP-2026-1111-1158</span><span class="badge danger">failed</span><span class="sp"></span><span class="note mono">flashpilot.report/v1</span></div>
+            <div class="meta">
+              <span class="m">started <span class="mv">2026-11-11T11:58:47Z</span></span>
+              <span class="m">engine <span class="mv">v0.2.0 (f14d1af)</span></span>
+              <span class="m">transport <span class="mv">sim-fd</span></span>
+              <span class="m">plan <span class="mv">plan.sim-fd.json</span></span>
+              <span class="m">plan fingerprint <span class="mv">e3400821709d3e50</span></span>
+            </div>
+            <div class="gates">
+              <span class="badge ok">✓ identity gate — DID 0xFD00 = "ready"</span>
+              <span class="badge ok">✓ fingerprint gate — matched before any driver call</span>
+            </div>
+            <div class="steptbl">
+              <div class="srow ok"><span class="sic">✓</span><span class="sn">diagnostic-session</span><span class="sr">ok · 51 ms</span></div>
+              <div class="srow ok"><span class="sic">✓</span><span class="sn">security-access</span><span class="sr">ok · 22 ms · level 1</span></div>
+              <div class="srow bad"><span class="sic">✕</span><span class="sn">erase</span><span class="sr">erasePoll exhausted · 12 rounds · last statusByte 0x72 · 1200 ms/round</span></div>
+              <div class="srow na"><span class="sic">—</span><span class="sn">download</span><span class="sr">not run</span></div>
+              <div class="srow na"><span class="sic">—</span><span class="sn">verify</span><span class="sr">not run</span></div>
+              <div class="srow na"><span class="sic">—</span><span class="sn">ecu-reset</span><span class="sr">not run</span></div>
+            </div>
+            <div class="errbox">{"ok":false,"error":"erase-poll-exhausted","rounds":12,"lastStatusByte":"0x72","exitCode":1}</div>
+            <div class="recov">
+              <span style="color:var(--warn);font-weight:700;font-size:14px">↺</span>
+              <span class="rt">
+                <b>Recovery — onFail resetAndRetry</b><br>
+                ECU reset sent at 11:59:03Z (best-effort) · retry 1/1 not started.<br>
+                Check bench power and the erase routine spec, then re-run verify before flashing again.
+              </span>
+              <span style="display:flex;flex-direction:column;gap:6px;flex:none">
+                <button class="btn">Re-run verify <kbd>v</kbd></button>
+                <button class="btn danger">Flash again — needs confirm</button>
+                <button class="btn">Copy report JSON</button>
+              </span>
+            </div>
+            <div class="trace">
+              <span>report SHA-256</span><span class="mono">9f2c…a41</span>
+              <span>·</span>
+              <span>failed runs write the same report — the failure is the evidence that matters most</span>
+            </div>
+          </div>
+
+        </div>
+        <div class="statusbar">
+          <span><kbd>↑</kbd><kbd>↓</kbd> select run</span>
+          <span><kbd>e</kbd> export</span>
+          <span><kbd>c</kbd> copy JSON</span>
+          <span><kbd>v</kbd> re-run verify</span>
+          <span><kbd>?</kbd> all shortcuts</span>
+          <span class="sp"></span>
+          <span>Prototype v0.1 · ◐ toggles theme</span>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      document.getElementById('app').classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

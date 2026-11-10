@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlashPilot — Settings</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== settings screen ==== */
+  .locknote { font-size: 10.5px; font-weight: 700; letter-spacing: .4px; color: var(--mute); }
+  .pathbox {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; user-select: text;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .keys { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--mute); }
+  .keys span b { font-weight: 600; color: var(--ink); margin-left: 4px; }
+  .quiet { background: var(--raised); border-color: transparent; }
+</style>
+</head>
+<body>
+  <div class="window" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">FlashPilot — Settings</div>
+      <div class="sp"></div>
+      <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme">◐</button>
+    </div>
+    <div class="body">
+      <aside class="sidebar">
+        <div class="brand"><div class="mark">FP</div><div class="name">FlashPilot</div></div>
+        <div class="sect">BENCH</div>
+        <nav class="nav">
+          <div class="item"><span class="kb">1</span>Bench</div>
+          <div class="item"><span class="kb">2</span>Plans</div>
+          <div class="item"><span class="kb">3</span>Flash</div>
+          <div class="item"><span class="kb">4</span>Evidence</div>
+        </nav>
+        <div class="sect">SYSTEM</div>
+        <nav class="nav">
+          <div class="item active">⚙ Settings</div>
+        </nav>
+        <div class="foot">
+          <span class="dot"></span><span class="st">Engine ready · v0.2.0</span>
+          <span class="sp"></span><span class="st mono">f14d1af</span>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="head">
+          <div>
+            <h1>Settings</h1>
+            <div class="sub">Engine, safety, evidence</div>
+          </div>
+          <div class="sp"></div>
+          <button class="btn">Reset to defaults…</button>
+        </div>
+        <div class="view">
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Engine</span><span class="sp"></span><span class="note">same engine as the CLI and MCP server</span></div>
+            <div class="set">
+              <div><div class="lab">Default transport</div><div class="desc">used when a plan does not pin one</div></div>
+              <span class="sp"></span>
+              <span class="seg"><span class="on">sim</span><span>doip</span><span>socketcan</span><span>pcan</span></span>
+            </div>
+            <div class="set">
+              <div><div class="lab">MCP server over stdio</div><div class="desc mono" style="font-size:10.5px">validate · flash · request · udid · odx-import</div></div>
+              <span class="sp"></span>
+              <span class="toggle on"></span>
+            </div>
+            <div class="set">
+              <div class="desc mono" style="margin-top:0">Every command prints one JSON object — camelCase, stable names, bounded errors. Exit codes never lie: 0 ok · 1 flash/assert · 2 usage · 3 not found · 4 transport.</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Safety</span><span class="sp"></span><span class="note">enforced by the engine, not by preferences</span></div>
+            <div class="set">
+              <div><div class="lab">Require explicit confirm before every flash</div><div class="desc">Cancel is the default action in the confirm dialog</div></div>
+              <span class="sp"></span>
+              <span class="toggle on"></span><span class="locknote">ALWAYS ON</span>
+            </div>
+            <div class="set">
+              <div><div class="lab">Power guard meter provider</div><div class="desc">polls during erase/download · out-of-band current aborts permanently</div></div>
+              <span class="sp"></span>
+              <span class="pathbox">command:./meter.sh · 200 ms · 5–1500 mA</span>
+            </div>
+            <div class="set">
+              <div><div class="lab">onFail default</div><div class="desc">best-effort ECU reset, then one retry</div></div>
+              <span class="sp"></span>
+              <span class="seg"><span>retry</span><span class="on">resetAndRetry</span></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Evidence</span><span class="sp"></span><span class="note">flashpilot.report/v1</span></div>
+            <div class="set">
+              <div><div class="lab">Report export directory</div><div class="desc">one file per run, written even when the run fails</div></div>
+              <span class="sp"></span>
+              <span class="pathbox">~/Bench/flashpilot-reports</span>
+              <button class="btn">Choose…</button>
+            </div>
+            <div class="set">
+              <div><div class="lab">Write report for failed runs</div><div class="desc">the failure is the evidence that matters most</div></div>
+              <span class="sp"></span>
+              <span class="toggle on"></span><span class="locknote">ALWAYS ON</span>
+            </div>
+            <div class="set">
+              <div><div class="lab">Auto-open report after run</div><div class="desc">jumps to Evidence with the new report selected</div></div>
+              <span class="sp"></span>
+              <span class="toggle"></span>
+            </div>
+          </div>
+
+          <div class="panel quiet">
+            <div class="panel-h"><span class="tt">Validated assets</span><span class="sp"></span><span class="note">official distribution</span></div>
+            <div class="desc" style="font-size:12px;line-height:1.55;max-width:640px">The free AGPL engine ships CI-grade simulation and the audited workflow. Officially validated adapter/ECU combinations, reproducible recovery reports and validated plan assets ship with the official distribution. Evidence levels below come from the support matrix and are never abbreviated.</div>
+            <div class="legend">
+              <span class="badge ok"><span class="level">hardware-in-loop verified</span></span>
+              <span class="badge accent"><span class="level">ci-simulated</span></span>
+              <span class="badge warn"><span class="level">implemented-unverified</span></span>
+              <span class="badge"><span class="level">planned</span></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Appearance</span><span class="sp"></span></div>
+            <div class="set">
+              <div><div class="lab">Theme</div><div class="desc">follows the system when set to Auto</div></div>
+              <span class="sp"></span>
+              <span class="seg"><span>Auto</span><span class="on">Light</span><span>Dark</span></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Keyboard</span><span class="sp"></span><span class="note">same semantics on macOS, Windows and Linux</span></div>
+            <div class="keys">
+              <span><kbd>1</kbd>–<kbd>4</kbd><b>sections</b></span>
+              <span><kbd>r</kbd><b>refresh</b></span>
+              <span><kbd>v</kbd><b>verify</b></span>
+              <span><kbd>o</kbd><b>choose plan</b></span>
+              <span><kbd>f</kbd><b>flash (confirm)</b></span>
+              <span><kbd>d</kbd><b>DTCs</b></span>
+              <span><kbd>e</kbd><b>export</b></span>
+              <span><kbd>esc</kbd><b>cancel</b></span>
+              <span><kbd>?</kbd><b>all shortcuts</b></span>
+            </div>
+          </div>
+
+        </div>
+        <div class="statusbar">
+          <span><kbd>esc</kbd> back</span>
+          <span><kbd>?</kbd> all shortcuts</span>
+          <span class="sp"></span>
+          <span>Prototype v0.1 · ◐ toggles theme</span>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      document.getElementById('app').classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

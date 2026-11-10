@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlashPilot — Bench (hero)</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== bench screen ==== */
+  .target { display: flex; gap: 20px; align-items: flex-start; }
+  .target .who { flex: 1; min-width: 0; }
+  .target .name { font-size: 19px; font-weight: 700; letter-spacing: .1px; }
+  .target .idline { margin-top: 6px; }
+  .target .idline .mono { color: var(--mute); }
+  .target .honest {
+    flex: none; width: 250px; font-size: 11px; line-height: 1.5; color: var(--mute);
+    border-left: 2px solid var(--line); padding-left: 10px;
+  }
+  .transport { padding: 2px 4px; }
+  .tname { font-size: 13.5px; font-weight: 600; }
+  .tdetail { font-size: 11.5px; color: var(--mute); margin-top: 2px; }
+  .tcheck { width: 16px; flex: none; color: var(--accent); font-size: 13px; text-align: center; }
+  .row.dim { opacity: .55; }
+  .checks .row { padding: 8px 10px; }
+  .ic { width: 16px; flex: none; text-align: center; font-size: 13px; font-weight: 700; }
+  .ic.p { color: var(--ok); } .ic.w { color: var(--warn); } .ic.f { color: var(--danger); }
+  .ctext { flex: 1; min-width: 0; }
+  .csum { font-size: 13px; }
+  .ccode { font-family: var(--mono); font-size: 10.5px; color: var(--mute); margin-top: 1px; }
+  .dtc { display: flex; align-items: center; gap: 10px; }
+</style>
+</head>
+<body>
+  <div class="window" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">FlashPilot — Bench</div>
+      <div class="sp"></div>
+      <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme">◐</button>
+    </div>
+    <div class="body">
+      <aside class="sidebar">
+        <div class="brand"><div class="mark">FP</div><div class="name">FlashPilot</div></div>
+        <div class="sect">BENCH</div>
+        <nav class="nav">
+          <div class="item active"><span class="kb">1</span>Bench</div>
+          <div class="item"><span class="kb">2</span>Plans</div>
+          <div class="item"><span class="kb">3</span>Flash</div>
+          <div class="item"><span class="kb">4</span>Evidence</div>
+        </nav>
+        <div class="sect">SYSTEM</div>
+        <nav class="nav">
+          <div class="item">⚙ Settings</div>
+        </nav>
+        <div class="foot">
+          <span class="dot"></span><span class="st">Engine ready · v0.2.0</span>
+          <span class="sp"></span><span class="st mono">f14d1af</span>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="head">
+          <div>
+            <h1>Bench</h1>
+            <div class="sub">Target, adapters and readiness — nothing here writes to the ECU yet</div>
+          </div>
+          <div class="sp"></div>
+          <button class="btn">⟳ Refresh status <kbd>r</kbd></button>
+          <button class="btn primary">✓ Validate bench <kbd>⏎</kbd></button>
+        </div>
+        <div class="view">
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Target</span><span class="badge accent">current</span><span class="sp"></span><span class="note">identity gate reads DIDs before every run</span></div>
+            <div class="target">
+              <div class="who">
+                <div class="name">Simulated Bench ECU</div>
+                <div class="idline mono">mode extended-diagnostic · transport sim · <span style="color:var(--ink)">DID 0xFD00 = "ready"</span></div>
+                <div style="margin-top:8px"><span class="badge accent"><span class="level">ci-simulated</span></span></div>
+              </div>
+              <div class="honest">Simulated evidence never claims production flashing reliability. Evidence levels come from the support matrix and are never abbreviated.</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">ECU / adapter combination</span><span class="sp"></span><span class="note">level shown, availability claimed separately</span></div>
+            <div class="transport">
+              <div class="row selected">
+                <span class="tcheck">●</span>
+                <div><div class="tname">Simulated bench ECU</div><div class="tdetail mono">transport sim · hardware-free</div></div>
+                <span class="sp"></span>
+                <span class="badge accent"><span class="level">ci-simulated</span></span>
+              </div>
+              <div class="row">
+                <span class="tcheck" style="color:var(--mute)">○</span>
+                <div><div class="tname">DoIP over Ethernet</div><div class="tdetail mono">doip · TCP 13400 · reconnect 6 × 400 ms</div></div>
+                <span class="sp"></span>
+                <span class="badge ok"><span class="level">hardware-in-loop verified</span></span>
+              </div>
+              <div class="row">
+                <span class="tcheck" style="color:var(--mute)">○</span>
+                <div><div class="tname">SocketCAN</div><div class="tdetail mono">can0 · Linux · classic CAN + CAN FD</div></div>
+                <span class="sp"></span>
+                <span class="badge warn"><span class="level">implemented-unverified</span></span>
+              </div>
+              <div class="row">
+                <span class="tcheck" style="color:var(--mute)">○</span>
+                <div><div class="tname">PEAK PCAN</div><div class="tdetail mono">pcan · Windows · classic CAN</div></div>
+                <span class="sp"></span>
+                <span class="badge warn"><span class="level">implemented-unverified</span></span>
+              </div>
+              <div class="row dim">
+                <span class="tcheck" style="color:var(--mute)">○</span>
+                <div><div class="tname">LIN hardware</div><div class="tdetail mono">adapter-dependent · protocol layer ships simulated</div></div>
+                <span class="sp"></span>
+                <span class="badge"><span class="level">planned</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel checks">
+            <div class="panel-h"><span class="tt">Readiness</span><span class="sp"></span><span class="note">validate before any driver call</span></div>
+            <div class="row">
+              <span class="ic p">✓</span>
+              <div class="ctext"><div class="csum">Engine reachable</div><div class="ccode">ok.engine · embedded Racket CS ready in 1.2 s</div></div>
+              <span class="badge ok">passed</span>
+            </div>
+            <div class="row">
+              <span class="ic p">✓</span>
+              <div class="ctext"><div class="csum">Plan fixtures discoverable</div><div class="ccode">ok.fixtures · 3 bundled plans found</div></div>
+              <span class="badge ok">passed</span>
+            </div>
+            <div class="row">
+              <span class="ic w">!</span>
+              <div class="ctext"><div class="csum">Power meter provider</div><div class="ccode">warn.meter · command:./meter.sh not configured — using built-in sim meter</div></div>
+              <span class="badge warn">warning</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Diagnostics</span><span class="sp"></span><span class="note">UDS 0x19 read · 0x14 clear</span></div>
+            <div class="dtc">
+              <button class="btn">Read DTCs <kbd>d</kbd></button>
+              <button class="btn">Clear DTCs…</button>
+              <span class="sp" style="flex:1"></span>
+              <span class="mono">0 DTCs · last read 12:03:41 UTC</span>
+            </div>
+          </div>
+
+        </div>
+        <div class="statusbar">
+          <span><kbd>1</kbd>–<kbd>4</kbd> sections</span>
+          <span><kbd>r</kbd> refresh</span>
+          <span><kbd>⏎</kbd> validate bench</span>
+          <span><kbd>d</kbd> DTCs</span>
+          <span><kbd>?</kbd> all shortcuts</span>
+          <span class="sp"></span>
+          <span>Prototype v0.1 · ◐ toggles theme</span>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      document.getElementById('app').classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

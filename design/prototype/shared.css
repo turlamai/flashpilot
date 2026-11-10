@@ -1,0 +1,153 @@
+/* ==== FlashPilot 原型共享壳层 — tokens 与组件，见 design/DESIGN.md ==== */
+:root {
+  --bg: #FAF8F5; --surface: #FFFFFF; --raised: #F3EFE9; --line: #E6E1D8;
+  --ink: #201B16; --mute: #8A8177; --accent: #D97757; --accent-soft: #FAEFEB;
+  --ok: #2F7D46; --ok-soft: #E7F1E9;
+  --warn: #B26B1B; --warn-soft: #F9EFDD;
+  --danger: #C23B2E; --danger-soft: #F9E9E6;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, "JetBrains Mono", monospace;
+}
+.dark {
+  --bg: #16120F; --surface: #1F1A16; --raised: #262019; --line: #332C25;
+  --ink: #F1ECE5; --mute: #A89F93; --accent: #E08A6B; --accent-soft: #32231C;
+  --ok: #63C58B; --ok-soft: #1E3028;
+  --warn: #E5A54B; --warn-soft: #332A19;
+  --danger: #F2776B; --danger-soft: #362019;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh; display: grid; place-items: center; padding: 40px 24px;
+  background: radial-gradient(1200px 800px at 20% 0%, #efeae2, #e2dcd1 60%, #d6cfc2);
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased; color: var(--ink);
+}
+.window {
+  position: relative;
+  width: 1180px; max-width: 100%; height: 740px; border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--bg); color: var(--ink);
+  box-shadow: 0 1px 2px rgba(32,27,22,.10), 0 12px 32px rgba(32,27,22,.18), 0 32px 80px rgba(32,27,22,.22);
+  transition: background .12s ease, color .12s ease;
+}
+.titlebar {
+  height: 44px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.lights { display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; }
+.lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.titlebar .t { font-size: 13px; font-weight: 600; color: var(--mute); letter-spacing: .2px; }
+.titlebar .sp { flex: 1; }
+.iconbtn {
+  width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--line); background: var(--raised);
+  color: var(--mute); display: grid; place-items: center; cursor: pointer; font-size: 13px;
+}
+.body { flex: 1; display: flex; min-height: 0; }
+.sidebar {
+  width: 212px; flex: none; display: flex; flex-direction: column;
+  background: var(--surface); border-right: 1px solid var(--line); padding: 12px 10px;
+}
+.brand { display: flex; align-items: center; gap: 9px; padding: 4px 8px 14px; }
+.brand .mark {
+  width: 22px; height: 22px; border-radius: 6px; background: var(--accent);
+  display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700;
+}
+.dark .brand .mark { color: #1D120C; }
+.brand .name { font-size: 14.5px; font-weight: 700; letter-spacing: .1px; }
+.sect { font-size: 11px; font-weight: 600; letter-spacing: .8px; color: var(--mute); padding: 12px 8px 6px; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+  font-size: 13.5px; color: var(--ink); cursor: default; user-select: none; transition: background .12s ease;
+}
+.item:hover { background: var(--raised); }
+.item .kb {
+  width: 16px; height: 16px; border-radius: 4px; display: grid; place-items: center;
+  font-size: 10.5px; color: var(--mute); background: var(--raised); border: 1px solid var(--line);
+}
+.item.active { background: var(--raised); font-weight: 600; box-shadow: inset 2px 0 0 var(--accent); }
+.item.active .kb { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+.item .pill {
+  margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border-radius: 99px; padding: 1px 7px;
+}
+.sidebar .foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 10px 8px 2px; border-top: 1px solid var(--line); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.foot .st { font-size: 12px; color: var(--mute); }
+.foot .sp { flex: 1; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.head { flex: none; display: flex; align-items: center; gap: 12px; padding: 14px 20px 12px; }
+.head h1 { font-size: 17px; font-weight: 700; }
+.head .sub { font-size: 12.5px; color: var(--mute); margin-top: 2px; }
+.head .sp { flex: 1; }
+.btn {
+  height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 6px;
+  font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  cursor: pointer; font-family: inherit;
+}
+.btn:hover { background: var(--raised); }
+.btn.primary { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.btn.danger { background: var(--danger-soft); border-color: transparent; color: var(--danger); }
+.btn:disabled { opacity: .45; cursor: default; }
+button:focus-visible, .item:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+.view { flex: 1; overflow-y: auto; padding: 0 20px 14px; }
+.statusbar {
+  flex: none; height: 32px; display: flex; align-items: center; gap: 14px; padding: 0 20px;
+  border-top: 1px solid var(--line); background: var(--surface); font-size: 12px; color: var(--mute);
+}
+.statusbar .sp { flex: 1; }
+kbd {
+  font-family: inherit; font-size: 10.5px; color: var(--mute);
+  background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+}
+/* ---- 面板与徽标 ---- */
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.panel-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.panel-h .tt { font-size: 13.5px; font-weight: 700; }
+.panel-h .note { font-size: 11px; color: var(--mute); }
+.panel-h .sp { flex: 1; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 99px; background: var(--raised); color: var(--mute);
+}
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.danger { background: var(--danger-soft); color: var(--danger); }
+.badge.accent { background: var(--accent-soft); color: var(--accent); }
+.level { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .1px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.mute { color: var(--mute); }
+.spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent); border-top-color: transparent; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toggle {
+  width: 34px; height: 20px; border-radius: 99px; background: var(--raised); border: 1px solid var(--line);
+  position: relative; flex: none;
+}
+.toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--mute); transition: all .12s ease;
+}
+.toggle.on { background: var(--ok-soft); border-color: transparent; }
+.toggle.on::after { left: 16px; background: var(--ok); }
+.seg { display: inline-flex; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 2px; gap: 2px; }
+.seg span { font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 4px; color: var(--mute); }
+.seg .on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(32,27,22,.08); }
+.row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
+  border-bottom: 1px solid var(--line); transition: background .12s ease;
+}
+.row:last-child { border-bottom: none; }
+.row:hover { background: color-mix(in srgb, var(--raised) 55%, transparent); }
+.row.selected { background: var(--raised); box-shadow: inset 2px 0 0 var(--accent); }
+.row .sp { flex: 1; }
+.field { font-size: 11px; color: var(--mute); }
+.set { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.set:last-child { border-bottom: none; }
+.set .lab { font-size: 13px; font-weight: 600; }
+.set .desc { font-size: 11.5px; color: var(--mute); margin-top: 2px; }
+.set .sp { flex: 1; }

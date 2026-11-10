@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlashPilot — Flash confirm flow</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== confirm flow: armed cockpit behind a modal dialog ==== */
+  .gate { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .gate:last-child { border-bottom: none; }
+  .gate .gl { width: 110px; flex: none; font-size: 12px; font-weight: 600; }
+  .gate .gv { font-family: var(--mono); font-size: 11.5px; color: var(--mute); flex: 1; }
+  .steps { opacity: .45; }
+  .step { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: none; }
+  .step .sic { width: 16px; flex: none; text-align: center; color: var(--mute); font-size: 12px; }
+  .step .sn { font-size: 13px; font-weight: 600; color: var(--mute); }
+  .step .sd { font-family: var(--mono); font-size: 11px; color: var(--mute); margin-left: auto; }
+  .backdrop {
+    position: absolute; inset: 0; background: color-mix(in srgb, #1b1510 38%, transparent);
+    display: grid; place-items: center; z-index: 10;
+  }
+  .dialog {
+    width: 520px; max-width: calc(100% - 48px); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: 0 2px 4px rgba(27,21,16,.14), 0 24px 64px rgba(27,21,16,.30);
+    padding: 18px 20px;
+  }
+  .dialog h2 { font-size: 15.5px; font-weight: 700; display: flex; align-items: center; gap: 9px; }
+  .dialog h2 .ic { color: var(--danger); font-size: 17px; }
+  .dialog .dsub { font-family: var(--mono); font-size: 11.5px; color: var(--mute); margin-top: 3px; }
+  .facts { margin: 14px 0; border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px; }
+  .fact { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .fact:last-child { border-bottom: none; }
+  .fact .fl { width: 84px; flex: none; color: var(--mute); font-size: 11px; padding-top: 1px; }
+  .fact .fv { flex: 1; font-family: var(--mono); font-size: 11.5px; }
+  .warnstrip {
+    background: var(--danger-soft); color: var(--danger); font-size: 12px; line-height: 1.5;
+    border-radius: 8px; padding: 10px 12px; font-weight: 500;
+  }
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .actions .btn { height: 34px; font-size: 13px; }
+  .btn.cancel:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .dialog .cap { font-size: 11px; color: var(--mute); margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="window" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">FlashPilot — Flash</div>
+      <div class="sp"></div>
+      <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme">◐</button>
+    </div>
+    <div class="body">
+      <aside class="sidebar">
+        <div class="brand"><div class="mark">FP</div><div class="name">FlashPilot</div></div>
+        <div class="sect">BENCH</div>
+        <nav class="nav">
+          <div class="item"><span class="kb">1</span>Bench</div>
+          <div class="item"><span class="kb">2</span>Plans</div>
+          <div class="item active"><span class="kb">3</span>Flash</div>
+          <div class="item"><span class="kb">4</span>Evidence</div>
+        </nav>
+        <div class="sect">SYSTEM</div>
+        <nav class="nav">
+          <div class="item">⚙ Settings</div>
+        </nav>
+        <div class="foot">
+          <span class="dot"></span><span class="st">Engine ready · v0.2.0</span>
+          <span class="sp"></span><span class="st mono">f14d1af</span>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="head">
+          <div>
+            <h1>Flash</h1>
+            <div class="sub mono">plan.sim.json · Simulated Bench ECU · run armed</div>
+          </div>
+          <div class="sp"></div>
+          <span class="badge accent"><span class="spin"></span> armed — waiting for confirm</span>
+        </div>
+        <div class="view">
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Pre-flight gates</span><span class="sp"></span><span class="note">all three must pass before this dialog appears</span></div>
+            <div class="gate"><span class="gl">Identity gate</span><span class="badge ok">✓ matched</span><span class="gv">DID 0xFD00 = "ready" · read as first step, byte-exact</span></div>
+            <div class="gate"><span class="gl">Fingerprint gate</span><span class="badge ok">✓ matched</span><span class="gv">e3400821709d3e50 · pinned before any driver call</span></div>
+            <div class="gate"><span class="gl">Power guard</span><span class="badge accent">armed</span><span class="gv">5–1500 mA · poll 200 ms · out-of-band current aborts permanently</span></div>
+          </div>
+
+          <div class="panel steps">
+            <div class="panel-h"><span class="tt">Audited workflow</span><span class="sp"></span><span class="note">each step is timed and recorded to the run report</span></div>
+            <div class="step"><span class="sic">○</span><span class="sn">diagnostic-session</span><span class="sd">pending</span></div>
+            <div class="step"><span class="sic">○</span><span class="sn">security-access</span><span class="sd">level 1 · xor0x5a</span></div>
+            <div class="step"><span class="sic">○</span><span class="sn">erase</span><span class="sd">0x08000000 · 30 B</span></div>
+            <div class="step"><span class="sic">○</span><span class="sn">download</span><span class="sd">1 block</span></div>
+            <div class="step"><span class="sic">○</span><span class="sn">verify</span><span class="sd">routine</span></div>
+            <div class="step"><span class="sic">○</span><span class="sn">ecu-reset</span><span class="sd">+ postResetGate DID 0xFD00</span></div>
+          </div>
+
+        </div>
+        <div class="statusbar">
+          <span><kbd>esc</kbd> cancel</span>
+          <span><kbd>f</kbd> open confirm</span>
+          <span><kbd>?</kbd> all shortcuts</span>
+          <span class="sp"></span>
+          <span>Prototype v0.1 · ◐ toggles theme</span>
+        </div>
+      </section>
+
+      <div class="backdrop">
+        <div class="dialog" role="dialog" aria-label="Confirm flash">
+          <h2><span class="ic">⚠</span> Erase &amp; flash plan.sim.json?</h2>
+          <div class="dsub">Simulated Bench ECU · transport sim · run FP-2026-1111-0901</div>
+          <div class="facts">
+            <div class="fact"><span class="fl">Target</span><span class="fv">Simulated Bench ECU · <span class="badge accent"><span class="level">ci-simulated</span></span></span></div>
+            <div class="fact"><span class="fl">Segment</span><span class="fv">0x08000000 · 30 B · BIN (fw.bin)</span></div>
+            <div class="fact"><span class="fl">Gates</span><span class="fv">identity matched · fingerprint matched · power guard armed</span></div>
+            <div class="fact"><span class="fl">Recovery</span><span class="fv">onFail resetAndRetry — best-effort reset, one retry</span></div>
+          </div>
+          <div class="warnstrip">Erasing destroys the current image at 0x08000000. Once erase starts the run cannot be cancelled — an abort is recorded as a safety event. This confirmation is written to the run report.</div>
+          <div class="actions">
+            <button class="btn cancel" autofocus>Cancel <kbd>esc</kbd></button>
+            <span style="flex:1"></span>
+            <button class="btn danger">Erase &amp; flash <kbd>⇧⏎</kbd></button>
+          </div>
+          <div class="cap">Cancel is the default action. Flashing always requires this explicit confirm — it cannot be skipped in Settings.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script>
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      document.getElementById('app').classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

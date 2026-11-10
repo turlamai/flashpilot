@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlashPilot — Flash run</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ==== flash run screen ==== */
+  .gatebar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .gatechip {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 4px 11px;
+  }
+  .gatechip .gv { font-family: var(--mono); font-weight: 500; color: var(--mute); }
+  .meter { width: 64px; height: 5px; background: var(--raised); border-radius: 99px; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 41%; background: var(--accent); border-radius: 99px; }
+  .progress { height: 4px; background: var(--raised); border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
+  .progress i { display: block; height: 100%; width: 38%; background: var(--accent); }
+  .step { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: none; }
+  .step .sic { width: 18px; flex: none; text-align: center; font-size: 13px; font-weight: 700; }
+  .step.done .sic { color: var(--ok); }
+  .step .sn { font-size: 13px; font-weight: 600; }
+  .step.pending { opacity: .5; }
+  .step.pending .sn { color: var(--mute); font-weight: 500; }
+  .step .sd { font-family: var(--mono); font-size: 11px; color: var(--mute); margin-left: auto; text-align: right; }
+  .step .live { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .live .lt { font-size: 11.5px; font-weight: 600; color: var(--accent); }
+  .log { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .log pre { font-family: var(--mono); font-size: 11px; line-height: 1.7; color: var(--mute); white-space: pre; user-select: text; }
+  .log pre b { color: var(--ink); font-weight: 500; }
+  .safety { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; line-height: 1.5; color: var(--danger); background: var(--danger-soft); border-radius: 8px; padding: 10px 12px; }
+</style>
+</head>
+<body>
+  <div class="window" id="app">
+    <div class="titlebar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="t">FlashPilot — Flash</div>
+      <div class="sp"></div>
+      <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme">◐</button>
+    </div>
+    <div class="body">
+      <aside class="sidebar">
+        <div class="brand"><div class="mark">FP</div><div class="name">FlashPilot</div></div>
+        <div class="sect">BENCH</div>
+        <nav class="nav">
+          <div class="item"><span class="kb">1</span>Bench</div>
+          <div class="item"><span class="kb">2</span>Plans</div>
+          <div class="item active"><span class="kb">3</span>Flash</div>
+          <div class="item"><span class="kb">4</span>Evidence</div>
+        </nav>
+        <div class="sect">SYSTEM</div>
+        <nav class="nav">
+          <div class="item">⚙ Settings</div>
+        </nav>
+        <div class="foot">
+          <span class="dot"></span><span class="st">Engine ready · v0.2.0</span>
+          <span class="sp"></span><span class="st mono">f14d1af</span>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="head">
+          <div>
+            <h1>Flash</h1>
+            <div class="sub mono">plan.sim.json · Simulated Bench ECU · run FP-2026-1111-0901</div>
+          </div>
+          <div class="sp"></div>
+          <span class="mono mute">elapsed 2.1 s</span>
+          <span class="badge accent"><span class="spin"></span> in progress — step 3 of 6</span>
+        </div>
+        <div class="view">
+
+          <div class="gatebar">
+            <span class="gatechip"><span style="color:var(--ok)">✓</span> identity <span class="gv">0xFD00 = "ready"</span></span>
+            <span class="gatechip"><span style="color:var(--ok)">✓</span> fingerprint <span class="gv">e3400821709d3e50</span></span>
+            <span class="gatechip"><span class="spin" style="width:10px;height:10px"></span> powerGuard <span class="gv">0.62 / 1.50 A</span> <span class="meter"><i></i></span></span>
+            <span class="gatechip"><span style="color:var(--mute)">↺</span> onFail <span class="gv">resetAndRetry</span></span>
+          </div>
+
+          <div class="progress"><i></i></div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Audited workflow</span><span class="sp"></span><span class="note">timings are recorded to the run report</span></div>
+            <div class="step done">
+              <span class="sic">✓</span><span class="sn">diagnostic-session</span>
+              <span class="sd">ok · 42 ms</span>
+            </div>
+            <div class="step done">
+              <span class="sic">✓</span><span class="sn">security-access</span>
+              <span class="sd">ok · 18 ms · level 1 · xor0x5a</span>
+            </div>
+            <div class="step" style="background:var(--accent-soft)">
+              <span class="sic"><span class="spin"></span></span>
+              <span class="sn">erase</span>
+              <span class="live">
+                <span class="lt">polled round 4/12 · statusByte 0x71 (busy)</span>
+                <span class="sd">elapsed 1.8 s</span>
+              </span>
+            </div>
+            <div class="step pending">
+              <span class="sic">○</span><span class="sn">download</span><span class="sd">queued · 1 block · 30 B</span>
+            </div>
+            <div class="step pending">
+              <span class="sic">○</span><span class="sn">verify</span><span class="sd">queued · routine</span>
+            </div>
+            <div class="step pending">
+              <span class="sic">○</span><span class="sn">ecu-reset</span><span class="sd">queued · + postResetGate DID 0xFD00</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h"><span class="tt">Live events</span><span class="sp"></span><span class="note">selectable · same events feed the CLI JSON stream</span></div>
+            <div class="log"><pre><b>12:04:31.002</b>  run FP-2026-1111-0901 start  transport=sim  plan=plan.sim.json
+<b>12:04:31.044</b>  diagnostic-session  ok  42ms
+<b>12:04:31.062</b>  security-access  ok  18ms  level=1 deriver=xor0x5a
+<b>12:04:31.081</b>  erase round 1  statusByte=0x71 (busy)
+<b>12:04:32.283</b>  erase round 4  statusByte=0x71 (busy)  elapsed=1.8s  <b>powerGuard 0.62A</b></pre></div>
+          </div>
+
+          <div class="safety">
+            <span style="font-weight:700">⚠</span>
+            <span>Do not disconnect the adapter or cut bench power while a run is in progress. Power loss during erase or download is recorded as a safety event and aborts permanently — safety events are never retried.</span>
+          </div>
+
+        </div>
+        <div class="statusbar">
+          <span><kbd>4</kbd> evidence</span>
+          <span><kbd>e</kbd> export report</span>
+          <span><kbd>?</kbd> all shortcuts</span>
+          <span class="sp"></span>
+          <span>run cannot be cancelled once erase starts</span>
+          <span class="sp"></span>
+          <span>Prototype v0.1 · ◐ toggles theme</span>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      document.getElementById('app').classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>
