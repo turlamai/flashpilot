@@ -7,6 +7,33 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
+- **`chunkSplitOffsets` plan field** — sectioned-download ECUs reject
+  TransferData blocks that straddle a section boundary (observed live as
+  positive-but-empty ACKs that silently drop the block and wedge the
+  session). The chunker now caps every block at the next declared split
+  offset, so one plan covers multi-section images end to end.
+- **Hardware-in-loop evidence for DoIP** — the complete cycle
+  (diagnostic session → security access → precheck routine → sliced
+  erase → 538-block download → verify → activate → EcuReset → post-reset
+  identity gate) reproduced twice consecutively on a
+  vendor-confidential reference ECU over plain Ethernet; the support
+  matrix gains an honest `hardware-in-loop verified` level scoped to
+  the reproduced adapter/ECU class (issue #4 gate).
+
+### Fixed
+
+- **RequestDownload block-length adoption is plausible-only** — an ECU
+  answering `50 40 ...` with a zero size-length nibble (while appending
+  the real block length anyway) used to collapse the transfer to
+  2-byte blocks and fragment the session manifest; nonsense
+  declarations now keep the plan value.
+- **TransferData sequence numbers cycle 1..255** — the counter
+  previously ran past one byte and crashed on any image over ~260 KiB.
+- **`FLASHPILOT_WIRE_TRACE=1` request/response tracing** —
+  response-level tracing in `uds-require-positive` plus request traces
+  for generic routine steps: the bench evidence loop that surfaced the
+  issues above.
+
 - **Live flash timeline** — the desktop hosts stream the audited workflow
   as it happens: the backend emits `plan-progress` events per engine
   step, and all three hosts render a live timeline while the flash runs

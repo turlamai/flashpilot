@@ -5,17 +5,20 @@
 ;; (`flashpilot transports`) so the matrix cannot rot away from reality.
 ;;
 ;; Evidence levels are honest by construction:
-;;   "ci-simulated"          — the full loop runs against the simulated
-;;                             ECU in CI on every push
-;;   "implemented-unverified" — code ships and is unit-tested where
-;;                             possible, but no real adapter/ECU has
-;;                             confirmed it
-;;   "planned"               — not implemented; named so agents and users
-;;                             never guess
+;;   "ci-simulated"            — the full loop runs against the simulated
+;;                               ECU in CI on every push
+;;   "implemented-unverified"  — code ships and is unit-tested where
+;;                               possible, but no real adapter/ECU has
+;;                               confirmed it
+;;   "hardware-in-loop verified" — a versioned adapter + reference-ECU
+;;                               reproduction report exists (the issue #4
+;;                               gate); vendor identity stays redacted
+;;   "planned"                 — not implemented; named so agents and
+;;                               users never guess
 ;;
-;; Nothing in this matrix claims production flashing reliability; a
-;; "hardware-in-loop verified" level will be added only with a versioned
-;; adapter + reference-ECU reproduction report (issue #4 gate).
+;; Nothing in this matrix claims production flashing reliability across
+;; arbitrary ECUs; the hardware-in-loop level is scoped to the exact
+;; adapter/ECU class named in its reproduction report.
 
 (require racket/contract
          racket/list
@@ -32,7 +35,8 @@
 
 (struct support-entry (transport platform evidence notes) #:transparent)
 
-(define evidence-levels '("ci-simulated" "implemented-unverified" "planned"))
+(define evidence-levels
+  '("ci-simulated" "implemented-unverified" "hardware-in-loop verified" "planned"))
 
 (define entries
   (list
@@ -55,9 +59,17 @@ required); no hardware reproduction report yet.")
     "CAN FD over PCAN waits on hardware qualification per the issue #4 \
 gate — driver code is not shipped unverified.")
    (support-entry
-    "doip" "cross-platform" "implemented-unverified"
-    "ISO 13400 DoIP over TCP with a real gateway/ECU still to be \
-reproduced; protocol unit-tested.")
+    "doip" "cross-platform" "hardware-in-loop verified"
+    "ISO 13400 DoIP over TCP. Reproduced end-to-end on a real ECU \
+(2026-11, engine f14d1af): full cycle diagnostic-session / security \
+access / precheck routine / sliced erase (110+ in-progress rounds) / \
+538-block download / verify routine / activate routine / EcuReset / \
+post-reset identity gate, twice consecutively. Plain-Ethernet adapter, \
+Windows host, vendor-confidential reference ECU (a sectioned-download \
+design); reproduction report on issue #4. Findings hardened into the \
+engine: guarded RequestDownload block-length adoption, 1..255 sequence \
+wrap, section-bounded chunking (chunkSplitOffsets), response-level \
+FLASHPILOT_WIRE_TRACE bench evidence.")
    (support-entry
     "lin-simulated" "cross-platform" "ci-simulated"
     "UDS over LIN with ISO 17987-3 style diagnostic framing (0x3C/0x3D, \

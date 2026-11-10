@@ -20,7 +20,7 @@ AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使�
 FlashPilot 就是围绕这个闭环构建的。
 
 - **声明式烧录计划** —— 每个 ECU 一份 JSON 文档：段（inline、BIN、Intel HEX、S-record）、会话、带可插拔 key provider 的 security access、erase/download/verify 流程、时序、恢复策略、电源保护、ECU 身份门、期望指纹。
-- **真实传输层** —— SocketCAN（Linux）、PEAK PCAN（Windows）、DoIP（以太网）。底层是 ISO-TP（ISO 15765-2）；LIN 在计划中。
+- **真实传输层** —— SocketCAN（Linux）、PEAK PCAN（Windows）、DoIP（以太网）。**DoIP 已过真机在环验证**：在分段下载架构的参考 ECU 上经普通以太网连续两次复现完整闭环（擦除到复位后身份门）——证据报告见 issue #4。
 - **Agent 优先的 CLI** —— 确定性 JSON 输出、永不撒谎的退出码，以及失败证据（有界、带指纹、可审计），让 agent 无需人类打开厂商工具就能诊断并重试。
 - **默认安全** —— 计划在任何驱动调用之前校验期望指纹；编程中的电源保护在电流越界时中止；破坏性操作会明说。
 
@@ -30,6 +30,6 @@ FlashPilot 就是围绕这个闭环构建的。
 
 **v0.2.0 —— 刷写驾驶舱**：v0.1.x 的全部底座（带 P2/P2\* 时序和 NRC 处理的 UDS、每步留审计的烧录工作流、声明式计划、指纹门、DTC、Intel HEX + S-record + BIN 模型、可插拔安全 provider、模拟 CAN 与 DoIP 上的 ISO-TP、内置模拟 ECU）之上补齐 vFlash 级能力面：ECU 身份门、刷写报告、轮询式擦除、通用例程步骤、复位后确认门、onFail 恢复执行、带可插拔电表 provider 的 powerGuard、DoIP 有界重连，以及三个桌面宿主的原生 Flash 按钮。
 
-下一道门：LIN 上的 UDS、对真实 ECU 的硬件在环资格（support-matrix 证据级），以及计划库。
+DoIP 已真机验证（见支持矩阵）。下一道门：硬件 LIN 适配器与计划库。
 
 **已发布**：v0.2.0 交付 agent 优先 CLI 与三桌面宿主，覆盖 Windows x64、Linux x64/arm64 与 macOS arm64/x64——每平台 zip + SHA-256，另有汇总 SHA256SUMS，见 [Releases](https://github.com/turlamai/flashpilot/releases/latest)。双语用户手册：<https://flashpilot.jrtx.site/guide.html>。

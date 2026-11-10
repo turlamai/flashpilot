@@ -17,13 +17,15 @@ CLI 输出漂移，测试会失败。
 | --- | --- |
 | `ci-simulated` | The complete loop (session → security → erase → download → verify → reset) runs against the simulated ECU in CI on every push. 完整闭环在每次推送的 CI 中对仿真 ECU 运行。 |
 | `implemented-unverified` | Code ships and is unit-tested where possible, but no physical adapter + reference ECU has reproduced it. 代码随源发布并尽可能单测，但尚无实体适配器 + 参考 ECU 的复现报告。 |
+| `hardware-in-loop verified` | A versioned adapter + reference-ECU reproduction report exists (the issue #4 gate). The claim is scoped to that adapter/ECU class, never to arbitrary ECUs. 已有版本化适配器 + 参考 ECU 复现报告（issue #4 门禁）；宣称仅限该适配器/ECU 类别，绝不外推到任意 ECU。 |
 | `planned` | Named so nobody guesses: not implemented. 明示未实现，避免猜测。 |
 
-A `hardware-in-loop verified` level will be added only with a versioned
-adapter + reference-ECU reproduction report (the issue #4 gate). Simulated
-evidence never claims production flashing reliability.
-只有附上版本化适配器 + 参考 ECU 复现报告（issue #4 门禁）才会新增
-`hardware-in-loop verified` 级别。仿真证据永不宣称生产刷写可靠性。
+Simulated evidence never claims production flashing reliability. The
+`hardware-in-loop verified` level is added only with a versioned
+adapter + reference-ECU reproduction report; vendor identity stays
+redacted in public reports.
+仿真证据永不宣称生产刷写可靠性。`hardware-in-loop verified` 仅随版本化
+适配器 + 参考 ECU 复现报告新增；公开报告中厂商身份一律脱敏。
 
 ## Matrix / 矩阵（generated shape, see `flashpilot transports --json`）
 
@@ -33,9 +35,28 @@ evidence never claims production flashing reliability.
 | socketcan-fd | Linux | ci-simulated |
 | pcan | Windows | implemented-unverified |
 | pcan-fd | Windows | planned |
-| doip | cross-platform | implemented-unverified |
+| doip | cross-platform | hardware-in-loop verified |
 | lin-simulated | cross-platform | ci-simulated |
 | lin-hardware | adapter-dependent | planned |
+
+**DoIP hardware-in-loop evidence / DoIP 真机证据** — engine `f14d1af`
+(2026-11): the complete cycle — diagnostic session, security access,
+precheck routine, sliced erase (110+ in-progress rounds), 538-block
+download, verify routine, activate routine, EcuReset, post-reset
+identity gate — reproduced twice consecutively on a vendor-confidential
+reference ECU over plain Ethernet (DoIP TCP), Windows host. Three
+engine gaps found on hardware were fixed in the same change: guarded
+RequestDownload block-length adoption, 1..255 sequence wrap, and
+section-bounded chunking (`chunkSplitOffsets` — the ECU rejects blocks
+that straddle a section boundary with a positive-but-empty ACK and the
+session wedges). Full report: issue #4.
+引擎 `f14d1af`（2026-11）：完整闭环——诊断会话、安全访问、预检例程、
+切片擦除（110+ 轮进行中）、538 块下载、校验例程、激活例程、EcuReset、
+复位后身份门——在厂商保密的参考 ECU 上经普通以太网（DoIP TCP）、
+Windows 宿主连续复现两次。同一变更内修复三个真机暴露的引擎缺口：有
+守卫的 RequestDownload 块长采纳、1..255 序号回绕、段边界封顶切块
+（`chunkSplitOffsets`——该 ECU 以 positive 空回显拒绝跨段块并楔死会
+话）。完整报告见 issue #4。
 
 ## Recovery semantics / 恢复语义
 
