@@ -1,10 +1,12 @@
 # Signed CLI update roadmap
 
-FlashPilot v0.1.0 is distributed as standalone ZIP archives for Windows,
+FlashPilot is distributed as standalone ZIP archives for Windows,
 macOS and Linux. The GUI debug cockpit is not a published desktop
-application. **The current release is manual-update only**: it publishes
-SHA256SUMS but does not publish an Ed25519-signed release feed, and no
-installed CLI has an embedded official update trust root.
+application. **Updates remain manual for installed CLIs**: every release
+now publishes an Ed25519-signed feed (`update-manifest.json` as a release
+asset), but no installed CLI ships with an embedded official update trust
+root yet, so nothing consumes the feed automatically — installation stays
+a deliberate operator action per this contract.
 
 ## Phase 1: offline trust policy
 
@@ -51,21 +53,30 @@ the official immutable version-tag URLs, then verifies the written Ed25519
 wrapper using the client public key *before atomically publishing* the
 manifest. A signer mismatch or missing archive leaves an existing
 manifest untouched. CI uses synthetic keys and disposable archives to test
-this behavior on every platform. **The current release workflow does not
-yet invoke the signer**: adding it without the production private key and
-client trust anchor would either prevent manual releases or create a feed
-no installed v0.1.0 client can trust.
+this behavior on every platform.
+
+**The release workflow now publishes the signed feed**: the publish job
+signs `update-manifest.json` with the `UPDATE_ED25519_PRIVATE_KEY_B64`
+secret (base64 DER — the exact form `read-ed25519-private-key` consumes;
+missing secret fails the release before anything is uploaded, so no
+unsigned feed can ship) and attaches it as a release asset alongside the
+archives. The round-trip verification inside the job uses the public half
+derived from the same release key — a placeholder until the real client
+trust root exists, which is why the feed is *published but not yet
+client-trusted*.
 
 ## Remaining release and CLI integration work
 
 1. Provision a dedicated Ed25519 update signing key in the protected
-   release system and **embed only the authenticated public trust root**
-   and key ID in built CLI distributions. Do not add private signing
-   material to this repository.
-2. Integrate the existing offline five-archive signer into a protected
-   release job after the clients embed the official public trust anchor.
-   Fail closed on missing or mismatched signer and verify archive parity
-   before uploading the Release.
+   release system (`UPDATE_ED25519_PRIVATE_KEY_B64` — the publish job
+   already fail-closes on it) and **embed only the authenticated public
+   trust root** and key ID (`flashpilot-release-2026`) in built CLI
+   distributions. Do not add private signing material to this
+   repository.
+2. Publish the feed: **done** — the release job signs
+   `update-manifest.json` as a release asset with fail-closed gate
+   behavior and archive parity checks; once clients embed the trust root
+   they can trust it with no feed-side change.
 3. Add an explicit `flashpilot update check` command (with stable JSON,
    documented exit codes), and `flashpilot update download` using Rivet's
    timeout-bounded, signed-size, SHA-256-verified downloader. No implicit

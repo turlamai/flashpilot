@@ -8,13 +8,8 @@ on:
   push:
     tags: ['v*']
 
-# attest-build-provenance signs the published subjects with the runner's
-# OIDC identity, so the release job needs the token and attestation write
-# scopes on top of contents (payback pattern).
 permissions:
   contents: write
-  id-token: write
-  attestations: write
 
 jobs:
   verify:
@@ -166,6 +161,57 @@ jobs:
           done
           (cd public && sha256sum flashpilot-*.zip | LC_ALL=C sort -k2 > SHA256SUMS && sha256sum --check SHA256SUMS)
           test "$(grep -c '^' public/SHA256SUMS)" -eq 5
+
+      # The signed feed goes out as the update-manifest.json release asset
+      # (scripts/sign-cli-update-manifest.rkt; docs/CLI-UPDATE-CONTRACT.md).
+      # No installed CLI trusts it yet — clients keep updating manually
+      # until a build ships with the embedded public trust root — but the
+      # feed exists from this release on, and it fails the release rather
+      # than publishing an unsigned or missing manifest (hackdigest gate
+      # shape). The secret is the DER (OneAsymmetricKey) private key,
+      # base64 — the exact form read-ed25519-private-key consumes.
+      - name: Set up Racket CS for the update signer
+        uses: Bogdanp/setup-racket@v1.15
+        with:
+          version: '9.3'
+          architecture: x64
+          distribution: full
+          variant: CS
+      - name: Install rivet for the update signer
+        run: raco pkg install --auto --no-docs rivet
+      - name: Sign the CLI update manifest (release asset)
+        env:
+          UPDATE_ED25519_PRIVATE_KEY_B64: ${{ secrets.UPDATE_ED25519_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          test -n "${UPDATE_ED25519_PRIVATE_KEY_B64:-}" || {
+            echo "::error::UPDATE_ED25519_PRIVATE_KEY_B64 is required; refusing a release without a signed update manifest"
+            exit 1
+          }
+          BUILD="$(grep -oE '\(build \. [0-9]+\)' rivet.rktd | grep -oE '[0-9]+')"
+          test -n "$BUILD" || { echo "::error::cannot read the build number from rivet.rktd"; exit 1; }
+          umask 077
+          KEY_DER="$RUNNER_TEMP/update-ed25519-private.der"
+          trap 'rm -f "$KEY_DER"' EXIT
+          printf '%s' "$UPDATE_ED25519_PRIVATE_KEY_B64" | base64 -d > "$KEY_DER"
+          # The signer's round-trip verification needs the counterpart
+          # public key. The client trust root is not shipped yet, so
+          # derive the public half of the same release key — never a key
+          # advertised by anything remote.
+          PUB_DER="$RUNNER_TEMP/update-trust-root.der"
+          openssl pkey -inform DER -in "$KEY_DER" -pubout -outform DER -out "$PUB_DER"
+          racket scripts/sign-cli-update-manifest.rkt \
+            --version "$VERSION" \
+            --build "$BUILD" \
+            --dir public \
+            --private-key "$KEY_DER" \
+            --public-key "$PUB_DER" \
+            --key-id flashpilot-release-2026 \
+            --output public/update-manifest.json
+          rm -f "$KEY_DER" "$PUB_DER"
+          test -s public/update-manifest.json
+
       - name: Build release body (changelog section + checksums)
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -195,6 +241,7 @@ jobs:
         with:
           files: |
             public/flashpilot-*.zip
+            public/update-manifest.json
             public/SHA256SUMS
           body_path: release-body.md
           generate_release_notes: true
@@ -210,10 +257,3 @@ jobs:
                 gh release delete-asset "$GITHUB_REF_NAME" "$name" --yes
               fi
             done
-
-      # Public provenance for everything the release publishes: the five
-      # CLI archives plus the signed update manifest (payback pattern).
-      - name: Attest public build provenance
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: public/*
