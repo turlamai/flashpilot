@@ -96,18 +96,23 @@
   (cond
     [(sim-uds-channel? ch) (sim-channel-request ch request 1000 5000)]
     [(doip-uds-channel? ch) (doip-uds-channel-request ch request 1000 5000)]
+    [(lin-uds-channel? ch) (lin-channel-request ch request 1000 5000)]
     [else (can-uds-channel-request ch request 1000 5000)]))
 
 (define (channel-flash ch plan)
   (cond
     [(sim-uds-channel? ch) (sim-channel-flash ch plan)]
     [(doip-uds-channel? ch) (doip-uds-channel-flash ch plan)]
+    [(lin-uds-channel? ch) (lin-channel-flash ch plan)]
     [else (can-uds-channel-flash ch plan)]))
 
 (define (transport-label ch)
   (cond
     [(sim-uds-channel? ch) (sim-channel-transport ch)]
     [(doip-uds-channel? ch) (doip-channel-transport ch)]
+    ;; The LIN channel has no accessor for its label yet; its health
+    ;; payload hardcodes the same string.
+    [(lin-uds-channel? ch) "iso-tp/lin (simulated)"]
     [else (channel-transport ch)]))
 
 ;; ----------------------------------------------------------------------------
