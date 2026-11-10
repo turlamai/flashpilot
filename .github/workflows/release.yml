@@ -8,8 +8,13 @@ on:
   push:
     tags: ['v*']
 
+# attest-build-provenance signs the published subjects with the runner's
+# OIDC identity, so the release job needs the token and attestation write
+# scopes on top of contents (payback pattern).
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   verify:
@@ -205,3 +210,10 @@ jobs:
                 gh release delete-asset "$GITHUB_REF_NAME" "$name" --yes
               fi
             done
+
+      # Public provenance for everything the release publishes: the five
+      # CLI archives plus the signed update manifest (payback pattern).
+      - name: Attest public build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: public/*
