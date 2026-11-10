@@ -273,6 +273,7 @@ flashpilot dtc clear</div>
           <tr><td><code>erasePoll</code></td><td data-i18n="g.plan-erasepoll">轮询式擦除：切片擦除型 ECU 每次擦一段并以状态字节应答；写了 statusByte / maxRounds / roundTimeoutMs 后引擎重复擦除例程直到状态字节报完成，超限即中止</td></tr>
           <tr><td><code>routineSteps</code></td><td data-i18n="g.plan-routinesteps">厂商例程步骤：at = before-erase / after-verify 两个插入点（预检条件、激活新面），带可选 record 与 timeoutMs；引擎只要求正响应并记录原始字节，不解释厂商状态语义</td></tr>
           <tr><td><code>postResetGate</code></td><td data-i18n="g.plan-postreset">复位后确认门：刷完复位后轮询一个 DID 直到字节匹配（did + value/valueHex + timeoutMs + intervalMs），ECU 必须自证在新镜像上健康回来才算成功</td></tr>
+          <tr><td><code>preEraseBytes</code> / <code>chunkSplitOffsets</code> / <code>verifyCrc32</code></td><td data-i18n="g.plan-sections">清单优先下载与分段切块：preEraseBytes 让引擎先传头部清单、擦除、再传余量（先验清单后毁闪的 ECU 用）；chunkSplitOffsets 声明下载流的段边界（段绝对偏移），切块永不超过边界——有的 ECU 以 positive 空回显静默丢弃跨段块并楔死会话；verifyCrc32 把校验例程的 record 钉成包头 CRC 字段回显（而非引擎自算流 CRC）</td></tr>
           <tr><td><code>p2TimeoutMs</code> / <code>p2StarTimeoutMs</code> / <code>maxBlockPayload</code> / <code>eraseRoutineId</code> / <code>verifyRoutineId</code> / <code>blockRetries</code></td><td data-i18n="g.plan-timing">时序与例程微调，缺省 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0，通常不用动</td></tr>
         </tbody>
       </table>
@@ -383,6 +384,7 @@ flashpilot dtc clear</div>
       'g.plan-fp': 'The fingerprint gate: pin the fingerprint reported by verify; a mismatch is rejected before the ECU is touched',
       'g.plan-identity': 'The ECU identification gate: each DID (22 XX XX) is read and compared byte-exact as the first flash step; a mismatch or unsupported DID aborts before any session change — the wrong ECU is never touched',
       'g.plan-erasepoll': 'Polled erase for slice-erase ECUs: each erase start answers a vendor status byte; with statusByte / maxRounds / roundTimeoutMs set the engine repeats the erase routine until the byte reports done and aborts honestly on exhaustion',
+      'g.plan-sections': 'Manifest-first download and section-bounded chunking: preEraseBytes streams the leading manifest, erases, then streams the rest (ECUs that validate a manifest before flash is destroyed); chunkSplitOffsets declares download-stream section boundaries (segment-absolute offsets) and the chunker never crosses one - some ECUs silently swallow straddling blocks behind positive-but-empty ACKs and wedge the session; verifyCrc32 pins the verify record to the package-header CRC echo (not an engine-computed stream CRC)',
       'g.plan-routinesteps': 'Vendor routine steps at fixed sequence points: at = before-erase / after-verify (condition prechecks, activations), optional record and timeoutMs. The engine requires a positive response and records the raw bytes — vendor status semantics are never interpreted',
       'g.plan-postreset': 'Post-reset confirmation gate: after EcuReset the engine polls one DID until its bytes match (did + value/valueHex + timeoutMs + intervalMs) — the ECU must prove it came back healthy on the new image before the run reports success',
       'g.plan-timing': 'Timing and routine fine-tuning; defaults 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0 — usually left alone',
@@ -470,6 +472,7 @@ flashpilot dtc clear</div>
       'g.plan-fp': '指纹门：verify 算出的指纹写死在计划里，不匹配在触碰 ECU 之前就拒绝',
       'g.plan-identity': '身份门：刷前逐条读 DID（22 XX XX）并做字节级精确比对，不匹配或 DID 不支持就在任何会话切换前中止——错误的 ECU 一次都不会被碰',
       'g.plan-erasepoll': '轮询式擦除：切片擦除型 ECU 每次擦一段并以状态字节应答；写了 statusByte / maxRounds / roundTimeoutMs 后引擎重复擦除例程直到状态字节报完成，超限即中止',
+      'g.plan-sections': '清单优先下载与分段切块：preEraseBytes 让引擎先传头部清单、擦除、再传余量（先验清单后毁闪的 ECU 用）；chunkSplitOffsets 声明下载流的段边界（段绝对偏移），切块永不超过边界——有的 ECU 以 positive 空回显静默丢弃跨段块并楔死会话；verifyCrc32 把校验例程的 record 钉成包头 CRC 字段回显（而非引擎自算流 CRC）',
       'g.plan-routinesteps': '厂商例程步骤：at = before-erase / after-verify 两个插入点（预检条件、激活新面），带可选 record 与 timeoutMs；引擎只要求正响应并记录原始字节，不解释厂商状态语义',
       'g.plan-postreset': '复位后确认门：刷完复位后轮询一个 DID 直到字节匹配（did + value/valueHex + timeoutMs + intervalMs），ECU 必须自证在新镜像上健康回来才算成功',
       'g.plan-timing': '时序与例程微调，缺省 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0，通常不用动',

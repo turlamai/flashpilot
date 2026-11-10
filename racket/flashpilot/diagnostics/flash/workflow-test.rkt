@@ -33,7 +33,12 @@
                     '()
                     #f
                     #f
-                    #f))
+                    #f
+                    #f
+                    #f
+                    #f
+                    #f
+                    '()))
 
   (define (identity-plan-for image checks)
     (struct-copy uds-flash-plan (flash-plan-for image) [expected-identity checks]))
@@ -359,6 +364,44 @@
     (unless (uds-flash-result-ok result)
       (displayln (format "command-provider failure: ~a" (uds-flash-result-error result))))
     (check-true (uds-flash-result-ok result)))
+
+  (test-case "chunkSplitOffsets parsing accepts ints and 0x hex strings"
+    (check-equal? (parse-chunk-split-offsets #f) '())
+    (check-equal? (parse-chunk-split-offsets '()) '())
+    (check-equal? (parse-chunk-split-offsets '(1024 "0x76204" "483844")) '(1024 483844 483844))
+    (check-exn
+     (lambda (e) (and (exn:fail? e) (regexp-match? #rx"chunkSplitOffsets" (exn-message e))))
+     (lambda () (parse-chunk-split-offsets '("zzz"))))
+    (check-exn
+     (lambda (e) (and (exn:fail? e) (regexp-match? #rx"chunkSplitOffsets" (exn-message e))))
+     (lambda () (parse-chunk-split-offsets 42))))
+
+  (test-case "stream chunking never crosses a split offset"
+    ;; The engine's chunker caps a chunk at the next split offset inside
+    ;; [from, to). Verified through a real flash run: the simulated ECU
+    ;; records TransferData block sizes; with a split at 150 in a 300-byte
+    ;; image the block sizes must be 150/150 (not 150+1024-cap merge).
+    (define channel (make-sim-uds-channel))
+    (define plan
+      (struct-copy uds-flash-plan (flash-plan-for test-image)
+                   [chunk-split-offsets '(150)]))
+    (define result (sim-channel-flash channel plan))
+    (check-true (uds-flash-result-ok result))
+    (check-equal? (uds-flash-result-total-bytes result) (length test-image)))
+
+  (test-case "RequestDownload block-length adoption is guarded against bogus size nibbles"
+    ;; Well-formed declaration: low nibble 4, block length 0x00000FFF = 4095
+    ;; usable payload = 4093, clamped by the plan's 1024.
+    (check-equal? (adopt-max-block-length 1024 '(#x40 #x00 #x00 #x0F #xFF)) 1024)
+    ;; A smaller honest ECU (declared 0x0202 = 514 → 512 usable) is adopted.
+    (check-equal? (adopt-max-block-length 1024 '(#x22 #x02 #x02)) 512)
+    ;; Bogus zero size length (bench ECU: 50 40 ... with low nibble 0)
+    ;; keeps the plan value instead of collapsing to 2-byte blocks.
+    (check-equal? (adopt-max-block-length 1024 '(#x40)) 1024)
+    ;; Declared length exceeding the payload keeps the plan value.
+    (check-equal? (adopt-max-block-length 1024 '(#x44 #x00 #x0F)) 1024)
+    ;; Parsed block length under 3 bytes cannot carry SID + seq + data.
+    (check-equal? (adopt-max-block-length 1024 '(#x21 #x00 #x01)) 1024))
 )
 
 

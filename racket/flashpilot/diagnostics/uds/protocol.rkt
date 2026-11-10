@@ -230,8 +230,10 @@
 (define (uds-request-download address
                               length*
                               #:compression [compression #x00]
-                              #:encryption [encryption #x00])
-  (define address-size (uds-address-length address))
+                              #:encryption [encryption #x00]
+                              #:address-length [address-length #f])
+  (define address-size
+    (or address-length (uds-address-length address)))
   (append (list sid-request-download
                 (bitwise-ior (arithmetic-shift compression 4) encryption)
                 (bitwise-ior (arithmetic-shift address-size 4) #x04))
@@ -300,8 +302,24 @@
            (uds-response #f sid '() nrc))])))
 
 ;; Positive responses only; negative responses throw with their NRC.
+
+;; Bench bring-up trace of every require-positive exchange
+;; (FLASHPILOT_WIRE_TRACE=1): one line per request/response pair, including
+;; the payload bytes that req-side-only traces never show.
+(define uds-wire-trace? (getenv "FLASHPILOT_WIRE_TRACE"))
+(define (trace-hex vals)
+  (string-join (for/list ([v vals]) (format "~a" (hex2 v))) " "))
+
 (define (uds-require-positive client request #:timing [timing #f] #:cancel [cancel #f])
   (define response (uds-send client request #:timing timing #:cancel cancel))
+  (when uds-wire-trace?
+    (eprintf "[uds] ~a -> ~a\n"
+             (trace-hex request)
+             (if (uds-response-positive response)
+                 (format "+ ~a" (trace-hex (uds-response-payload response)))
+                 (format "- ~a (0x~a)"
+                         (nrc-name (uds-response-nrc response))
+                         (hex2 (uds-response-nrc response))))))
   (if (uds-response-positive response)
       (uds-response-payload response)
       (uds-protocol-error (format "~a rejected: ~a (0x~a)."

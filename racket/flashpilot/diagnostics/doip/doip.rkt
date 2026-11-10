@@ -39,6 +39,7 @@
  doip-client-connected?
  doip-channel-disconnect!
  doip-channel-revive!
+ doip-channel-transport
  doip-connection-error?
  doip-uds-channel-reconnect-count
  (struct-out simulated-doip-server)
@@ -600,6 +601,10 @@
                                         (doip-uds-channel-ecu-address c)))
        (doip-client-connect! client (doip-uds-channel-host c) (doip-uds-channel-port c))
        (set-box! (doip-uds-channel-client-box c) client)))))
+
+;; Transport label for evidence/reports.
+(define (doip-channel-transport c)
+  (format "doip ~a:~a" (doip-uds-channel-host c) (doip-uds-channel-port c)))
 
 (define (doip-uds-channel-request c request p2-ms p2-star-ms)
   (define hex (bytes->hex request))

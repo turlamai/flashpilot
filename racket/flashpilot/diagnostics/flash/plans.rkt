@@ -30,6 +30,7 @@
          uds-flash-hardening-expected-fingerprint
          flash-plan-fingerprint
          identity-json
+         parse-chunk-split-offsets
          read-flash-plan-json
          read-segment-file)
 
@@ -48,7 +49,12 @@
                   routine-steps
                   post-reset-gate
                   on-fail
-                  power-guard)
+                  power-guard
+                  address-length
+                  pre-erase-bytes
+                  verify-crc32
+                  erase-record
+                  chunk-split-offsets)
   #:transparent)
 (struct uds-flash-segment (address data file) #:transparent)
 
@@ -300,6 +306,74 @@
                    args-raw
                    ma-raw)))
 
+;; addressLength: fixed-width address encoding for RequestDownload and
+;; the routine records. Default (#f): minimal encoding per address value.
+;; Some ECUs declare an exact format (typically 4-byte) and reject
+;; shorter encodings.
+(define (parse-address-length raw)
+  (cond
+    [(not raw) #f]
+    [(and (exact-integer? raw) (<= 1 raw 8)) raw]
+    [else
+     (raise-validation
+      (format "addressLength must be an integer 1..8 (got '~a')." raw))]))
+
+;; eraseRecord: explicit hex bytes for the erase routine record. Default
+;; (#f): the engine encodes (address, size) per the address length. Some
+;; ECUs expect a fixed legacy payload (e.g. 8 zero bytes) and validate
+;; the record at the DCM layer.
+;; preEraseBytes: transfer exactly this many leading image bytes (a
+;; session manifest the ECU validates) after RequestDownload but BEFORE
+;; the erase; the remaining bytes stream after the erase completes.
+;; Requires a single segment - the split only makes sense for one linear
+;; download session.
+;; verifyCrc32: explicit package-level CRC for the verify routine — for
+;; ECUs whose CheckDataIntegrity expects a package CRC that is not the
+;; engine's own byte-stream computation (e.g. a header-fields CRC the
+;; packer computes). Hex string, parsed big-endian into the 4-byte
+;; routine record. Default (#f): engine-computed CRC32 over segments.
+(define (parse-verify-crc32 raw)
+  (cond
+    [(not raw) #f]
+    [(and (string? raw) (string-prefix? (string-downcase raw) "0x"))
+     (define b (hex-parse (substring raw 2)))
+     (unless (= (length b) 4)
+       (raise-validation
+        (format "verifyCrc32 must be exactly 4 bytes (got ~a)." (length b))))
+     b]
+    [else
+     (raise-validation "verifyCrc32 must be a 0x-prefixed 4-byte hex string.")]))
+
+(define (parse-pre-erase-bytes raw)
+  (cond
+    [(not raw) #f]
+    [(and (exact-integer? raw) (> raw 0)) raw]
+    [else
+     (raise-validation
+      (format "preEraseBytes must be an integer > 0 (got '~a')." raw))]))
+
+;; Payload-stream offsets a TransferData block must not cross. Some ECUs
+;; split their download stream into sections (app / data / cal) and
+;; reject - or worse, silently swallow - a block that straddles one.
+;; Offsets are segment-absolute (0 = first byte of the segment data) and
+;; accept integers or 0x-prefixed hex strings.
+(define (parse-chunk-split-offsets raw)
+  (cond
+    [(not raw) '()]
+    [(list? raw)
+     (for/list ([v (in-list raw)])
+       (cond
+         [(exact-integer? v) v]
+         [(and (string? v) (string-prefix? (string-downcase v) "0x"))
+          (or (string->number (substring v 2) 16)
+              (raise-validation (format "Invalid chunkSplitOffsets entry '~a'." v)))]
+         [(and (string? v) (string->number v)) (string->number v)]
+         [else
+          (raise-validation
+           (format "chunkSplitOffsets entries must be integers (got '~a')." v))]))]
+    [else
+     (raise-validation "chunkSplitOffsets must be a list of offsets.")]))
+
 (define (read-flash-plan-json text)
   (define doc
     (with-handlers ([exn:fail? (lambda (e)
@@ -368,7 +442,13 @@
                     (let ([raw (hash-ref doc 'postResetGate #f)])
                       (and raw (parse-post-reset-gate raw)))
                     on-fail
-                    power-guard))
+                    power-guard
+                    (parse-address-length (hash-ref doc 'addressLength #f))
+                    (parse-pre-erase-bytes (hash-ref doc 'preEraseBytes #f))
+                    (parse-verify-crc32 (hash-ref doc 'verifyCrc32 #f))
+                    (let ([raw (hash-ref doc 'eraseRecord #f)])
+                      (and raw (hex-parse raw)))
+                    (parse-chunk-split-offsets (hash-ref doc 'chunkSplitOffsets #f))))
   ;; dataLength opts the transport into CAN FD (8 = classic; any other
   ;; value snaps up to the nearest legal FD length). DoIP ignores it.
   (define data-length
