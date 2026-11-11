@@ -65,6 +65,95 @@
 }
 html[data-theme="dark"] .chip.ok { color: var(--kit-accent); }
 
+/* ---------- Evidence level chips (DESIGN.md LevelBadge mapping:
+   hardware-in-loop verified=ok · ci-simulated=accent ·
+   implemented-unverified=warn · planned=mute) ---------- */
+:root {
+    --lvl-ok: #2F7D46;
+    --lvl-ok-soft: #E7F1E9;
+    --lvl-ok-line: rgba(47, 125, 70, 0.35);
+    --lvl-warn: #B26B1B;
+    --lvl-warn-soft: #F9EFDD;
+    --lvl-warn-line: rgba(178, 107, 27, 0.35);
+}
+html[data-theme="dark"] {
+    --lvl-ok: #63C58B;
+    --lvl-ok-soft: #1E3028;
+    --lvl-ok-line: rgba(99, 197, 139, 0.4);
+    --lvl-warn: #E5A54B;
+    --lvl-warn-soft: #332A19;
+    --lvl-warn-line: rgba(229, 165, 75, 0.4);
+}
+.chip.lvl {
+    font-family: var(--kit-font-mono);
+    font-size: 11.5px;
+    padding: 3px 10px;
+    white-space: nowrap;
+}
+.chip.lvl-hil {
+    border-color: var(--lvl-ok-line);
+    color: var(--lvl-ok);
+    background: var(--lvl-ok-soft);
+}
+.chip.lvl-sim {
+    border-color: var(--kit-accent);
+    color: var(--kit-accent-strong);
+    background: var(--kit-accent-soft);
+}
+html[data-theme="dark"] .chip.lvl-sim { color: var(--kit-accent); }
+.chip.lvl-iuv {
+    border-color: var(--lvl-warn-line);
+    color: var(--lvl-warn);
+    background: var(--lvl-warn-soft);
+}
+.lvl-row { margin: 0 0 10px; }
+
+/* ---------- Support matrix table ---------- */
+.matrix-scroll { overflow-x: auto; margin-top: 40px; }
+.matrix-table {
+    width: 100%;
+    max-width: 860px;
+    border-collapse: collapse;
+}
+.matrix-table th {
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--kit-text-3);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--kit-border-strong);
+    white-space: nowrap;
+}
+.matrix-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--kit-border);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--kit-text-2);
+    vertical-align: middle;
+}
+.matrix-table td.mono {
+    font-family: var(--kit-font-mono);
+    font-size: 12.5px;
+    color: var(--kit-text);
+    white-space: nowrap;
+}
+.ev-note {
+    margin: 22px auto 0;
+    max-width: 760px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--kit-text-3);
+}
+.ev-note a {
+    color: var(--kit-accent-strong);
+    font-weight: 600;
+}
+html[data-theme="dark"] .ev-note a { color: var(--kit-accent); }
+.ev-note a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
 /* ---------- Roadmap ---------- */
 .roadmap-list {
     margin: 36px 0 0;

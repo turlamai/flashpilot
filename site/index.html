@@ -5,17 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FlashPilot — Agent 原生的 ECU 刷写</title>
-    <meta name="description" content="FlashPilot：免授权费的 vFlash 替代品。声明式烧录计划、UDS over CAN（ISO-TP）/DoIP/LIN、确定性 JSON、永不撒谎的退出码、有界失败证据，为编码 agent 与 CI 而生。Rivet 线——Racket 引擎驱动原生壳。">
+    <meta name="description" content="FlashPilot：AGPL 引擎免费、为编码 agent 与 CI 而生的声明式 ECU 刷写工具。身份门、指纹门、电源守卫三道门禁，flashpilot.report/v1 审计证据链，四级证据矩阵诚实标注支持边界——DoIP 已在参考 ECU 上真机验证。UDS over CAN（ISO-TP）/ DoIP / LIN。">
     <link rel="canonical" href="https://flashpilot.jrtx.site/">
     <meta name="theme-color" content="#D97757">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="FlashPilot">
     <meta property="og:title" content="FlashPilot — Agent-native ECU flashing">
-    <meta property="og:description" content="A license-free vFlash alternative: declarative flash plans, UDS over CAN (ISO-TP) / DoIP / LIN, deterministic JSON, exit codes that never lie, bounded failure evidence — built for coding agents and CI.">
+    <meta property="og:description" content="A declarative ECU flashing tool with a free AGPL engine, built for coding agents and CI: identity, fingerprint and power-guard gates, flashpilot.report/v1 audit evidence, and a four-level evidence matrix that states the support boundary honestly — DoIP verified on a real reference ECU. UDS over CAN (ISO-TP) / DoIP / LIN.">
     <meta property="og:url" content="https://flashpilot.jrtx.site/">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="FlashPilot — Agent-native ECU flashing">
-    <meta name="twitter:description" content="A license-free vFlash alternative: declarative flash plans, UDS over CAN (ISO-TP) / DoIP / LIN, deterministic JSON, exit codes that never lie, bounded failure evidence — built for coding agents and CI.">
+    <meta name="twitter:description" content="A declarative ECU flashing tool with a free AGPL engine, built for coding agents and CI: identity, fingerprint and power-guard gates, flashpilot.report/v1 audit evidence, and a four-level evidence matrix that states the support boundary honestly — DoIP verified on a real reference ECU. UDS over CAN (ISO-TP) / DoIP / LIN.">
 
     <!-- Theme + language pre-paint: apply before first paint, no flash.
          Storage keys carry forward from the previous flashpilot homepage. -->
@@ -54,6 +54,7 @@
             <nav class="kit-nav-links">
                 <a href="#why" data-i18n="nav.why">为什么需要</a>
                 <a href="#design" data-i18n="nav.design">设计原则</a>
+                <a href="#evidence" data-i18n="nav.evidence">证据矩阵</a>
                 <a href="#start" data-i18n="nav.start">三步开始</a>
                 <a href="#download" data-i18n="nav.download">下载</a>
                 <a href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md" data-zh-href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.zh-CN.md" data-en-href="https://github.com/turlamai/flashpilot/blob/main/docs/USER-GUIDE.md" data-i18n="nav.guide">手册</a>
@@ -82,9 +83,9 @@
         <!-- Hero -->
         <section class="kit-hero">
             <div class="kit-container">
-                <span class="kit-eyebrow" data-i18n="kicker">免授权费 · 无常驻进程 · 为 agent 而生</span>
+                <span class="kit-eyebrow" data-i18n="kicker">AGPL 引擎免费 · 无常驻进程 · 为 agent 与 CI 而生</span>
                 <h1><span data-i18n="hero-title">给 agent 一条诚实的 ECU 烧录线。</span></h1>
-                <p class="kit-lead" data-i18n="hero-lede">汽车刷写的现状是 vFlash：按席位收费、Windows GUI、agent 开不动的 COM API。AI 时代，烧录知识的编写成本坍塌了——agent 能照着 OEM 规格书起草烧录计划，剩下的价值在闭环：生成计划 → 校验指纹 → 带保护地烧录 → 收集失败证据 → 重新生成。FlashPilot 就是为这个闭环而生。</p>
+                <p class="kit-lead" data-i18n="hero-lede">刷写是不可逆的硬件操作：刷错镜像、擦错目标、电流越界，任何一步都可能变砖。FlashPilot 把安全做成结构而非开关——身份门、指纹门、电源守卫三道门禁依次通过才允许动手，全程落成 flashpilot.report/v1 审计证据，失败自带恢复路径。支持边界以四级证据徽标公开标注：DoIP 已在参考 ECU 上真机验证；仿真目标永远带 ci-simulated 徽标，仿真证据永不宣称生产刷写可靠性。agent 起草计划，FlashPilot 守住闭环。</p>
                 <div class="kit-btn-row">
                     <div class="kit-dl">
                         <a class="kit-btn kit-btn--primary" data-kit-dl-primary href="https://github.com/turlamai/flashpilot/releases/latest">
@@ -140,45 +141,101 @@
                 <div class="kit-grid kit-grid--2" style="margin-top: 44px;">
                     <div class="kit-card">
                         <h3 data-i18n="p1-title">声明式烧录计划</h3>
-                        <p data-i18n="p1-body">一份 JSON 描述一个 ECU：段（内联 / BIN / Intel HEX / S-record）、会话、安全访问、擦写校验例程、时序、恢复策略、电源守卫、期望指纹——可版本化、可评审、可复用。</p>
+                        <p data-i18n="p1-body">一份 JSON 描述一个 ECU：段（内联 / BIN / Intel HEX / S-record）、会话、安全访问、擦写校验例程、时序、恢复策略、电源守卫、期望指纹、身份期望——可版本化、可评审、可复用。ODX/PDX 子集导入与计划 lint（段重叠、空洞、缺数据）在任何驱动调用之前拦住坏计划。</p>
                     </div>
                     <div class="kit-card">
-                        <h3 data-i18n="p2-title">指纹门禁，先验证后动手</h3>
-                        <p data-i18n="p2-body">expectedFingerprint 把镜像钉死在计划里；指纹不对，在任何驱动调用之前就拒绝——刷错的成本是一次变砖，不是一次重跑。</p>
+                        <h3 data-i18n="p2-title">三道门禁，先验证后动手</h3>
+                        <p data-i18n="p2-body">身份门先读 expectedIdentity DID——目标不对、DID 不支持、载荷不足，都在任何会话变更之前中止并留下有界证据；指纹门把镜像钉死在计划里，指纹不对在任何驱动调用之前拒绝；复位后确认门轮询 DID，直到 ECU 证明它回来了——卡死的 ECU 拿不到绿灯。</p>
                     </div>
                     <div class="kit-card">
-                        <h3 data-i18n="p3-title">安全默认</h3>
-                        <p data-i18n="p3-body">编程电源守卫轮询电流，越界即断电中止；破坏性计划明说；失败恢复 retry / resetAndRetry 二选一。默认就是安全的，而不是配置出来的。</p>
+                        <h3 data-i18n="p3-title">电源守卫：真表才测量</h3>
+                        <p data-i18n="p3-body">powerGuard 是强制执行的条款：接入电表 provider——CI 与台架用确定性仿真 provider，真机接外部 vendor 脚本实时输出 mA，厂商代码留在引擎之外——擦除与每个下载块期间轮询电流，越界即永久中止：物理安全事件绝不盲目重试。没有 provider 的计划不假装测量。</p>
                     </div>
                     <div class="kit-card">
-                        <h3 data-i18n="p4-title">退出码永不撒谎</h3>
-                        <p data-i18n="p4-body">0 成功 · 1 断言失败 · 2 用法错误 · 3 未找到 · 4 传输错误；每条命令打印一个 JSON 对象——camelCase、字段名稳定、错误文本有界，不用抓屏去猜。</p>
+                        <h3 data-i18n="p4-title">失败即证据</h3>
+                        <p data-i18n="p4-body">--report 把每次刷写写成 flashpilot.report/v1 证据工件：UTC 起始、传输、带耗时的审计步骤、身份/指纹门记录与结局；失败的尝试落同一份报告。错误文本有界，恢复策略 retry / resetAndRetry 强制执行，擦除与下载永不盲目重试——断电重跑从指纹门重新开始。</p>
+                    </div>
+                    <div class="kit-card">
+                        <h3 data-i18n="p5-title">退出码永不撒谎</h3>
+                        <p data-i18n="p5-body">0 成功 · 1 刷写/断言失败 · 2 用法错误 · 3 未找到 · 4 传输错误；每条命令打印一个 JSON 对象——camelCase、字段名稳定、错误文本有界，不用抓屏去猜。</p>
+                    </div>
+                    <div class="kit-card">
+                        <h3 data-i18n="p6-title">Agent 界面：CLI 与 MCP</h3>
+                        <p data-i18n="p6-body">无常驻进程 CLI 之外，同一引擎讲 stdio MCP：flashpilot_validate / flashpilot_flash / flashpilot_request / flashpilot_udid / flashpilot_odx_import 五个 agent 工具，CI 冒烟测试守住接口面——agent 用母语跑完整条烧录链。</p>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- Evidence matrix -->
+        <section id="evidence" class="kit-section">
+            <div class="kit-container">
+                <span class="kit-kicker" data-i18n="ev.kicker">证据</span>
+                <h2 class="kit-h2" data-i18n="ev-title">支持边界，按证据说话</h2>
+                <p class="kit-lead" style="max-width: 760px; margin-top: 18px;" data-i18n="ev-lede">支持矩阵的权威载体是代码：flashpilot transports --json 输出每个传输/适配器子集的证据级别；文档与 CLI 输出由测试锁死，不会漂移。</p>
+                <div class="kit-grid kit-grid--2" style="margin-top: 36px;">
+                    <div class="kit-card">
+                        <p class="lvl-row"><span class="chip lvl lvl-hil">hardware-in-loop verified</span></p>
+                        <p data-i18n="ev.l1-d">存在版本化适配器 + 参考 ECU 复现报告（issue #4 门禁）；宣称仅限该适配器/ECU 类别，绝不外推到任意 ECU。</p>
+                    </div>
+                    <div class="kit-card">
+                        <p class="lvl-row"><span class="chip lvl lvl-sim">ci-simulated</span></p>
+                        <p data-i18n="ev.l2-d">完整闭环（会话 → 安全访问 → 擦除 → 下载 → 校验 → 复位）在每次推送的 CI 中对仿真 ECU 运行。</p>
+                    </div>
+                    <div class="kit-card">
+                        <p class="lvl-row"><span class="chip lvl lvl-iuv">implemented-unverified</span></p>
+                        <p data-i18n="ev.l3-d">代码随源发布并尽可能单测；尚无实体适配器 + 参考 ECU 的复现报告。</p>
+                    </div>
+                    <div class="kit-card">
+                        <p class="lvl-row"><span class="chip lvl lvl-plan">planned</span></p>
+                        <p data-i18n="ev.l4-d">明示未实现，避免猜测。</p>
+                    </div>
+                </div>
+                <div class="matrix-scroll">
+                    <table class="matrix-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="ev.th-transport">传输</th>
+                                <th data-i18n="ev.th-platform">平台</th>
+                                <th data-i18n="ev.th-evidence">证据级别</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="mono">socketcan</td><td>Linux</td><td><span class="chip lvl lvl-iuv">implemented-unverified</span></td></tr>
+                            <tr><td class="mono">socketcan-fd</td><td>Linux</td><td><span class="chip lvl lvl-sim">ci-simulated</span></td></tr>
+                            <tr><td class="mono">pcan</td><td>Windows</td><td><span class="chip lvl lvl-iuv">implemented-unverified</span></td></tr>
+                            <tr><td class="mono">pcan-fd</td><td>Windows</td><td><span class="chip lvl lvl-plan">planned</span></td></tr>
+                            <tr><td class="mono">doip</td><td data-i18n="ev.p-cross">跨平台</td><td><span class="chip lvl lvl-hil">hardware-in-loop verified</span></td></tr>
+                            <tr><td class="mono">lin-simulated</td><td data-i18n="ev.p-cross">跨平台</td><td><span class="chip lvl lvl-sim">ci-simulated</span></td></tr>
+                            <tr><td class="mono">lin-hardware</td><td data-i18n="ev.p-adapter">适配器相关</td><td><span class="chip lvl lvl-plan">planned</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="ev-note"><span data-i18n="ev-note">仿真证据永不宣称生产刷写可靠性；hardware-in-loop verified 仅随版本化适配器 + 参考 ECU 复现报告新增，公开报告中厂商身份一律脱敏。DoIP 真机证据（2026-11）：诊断会话、安全访问、预检例程、切片擦除（110+ 轮进行中）、538 块下载、校验与激活例程、复位后身份门的完整闭环，在参考 ECU 上经普通以太网（DoIP TCP、Windows 宿主）连续两次复现。完整报告与恢复语义：</span> <a href="https://github.com/turlamai/flashpilot/issues/4">issue #4</a> · <a href="https://github.com/turlamai/flashpilot/blob/main/docs/support-matrix.md">docs/support-matrix.md</a></p>
+            </div>
+        </section>
+
         <!-- Three steps -->
-        <section id="start" class="kit-section">
+        <section id="start" class="kit-section kit-section--alt">
             <div class="kit-container">
                 <span class="kit-kicker" data-i18n="start.kicker">上手</span>
                 <h2 class="kit-h2" data-i18n="start-title">三步开始</h2>
                 <div class="kit-steps" style="margin-top: 44px;">
                     <div class="kit-step">
                         <h3 data-i18n="s1-title">装上引擎</h3>
-                        <p data-i18n="s1-body">Racket 包一行装好，引擎与 CLI 即在本地可用。</p>
+                        <p data-i18n="s1-body">从 Releases 下载对应平台的 CLI zip（免装 Racket），或从源码一行装好引擎与 CLI。</p>
                         <pre class="step-code"><code>git clone https://github.com/turlamai/flashpilot.git
 cd flashpilot
 raco pkg install --auto --name flashpilot --link racket</code></pre>
                     </div>
                     <div class="kit-step">
-                        <h3 data-i18n="s2-title">内置模拟 ECU 空跑闭环</h3>
-                        <p data-i18n="s2-body">默认传输是内置模拟 ECU——真实的 ISO-TP/UDS 栈，全程无需硬件，CI 里也能跑完整烧录闭环。</p>
+                        <h3 data-i18n="s2-title">仿真 ECU 空跑闭环</h3>
+                        <p data-i18n="s2-body">默认传输是内置模拟 ECU：会话 → 安全访问 → 擦除 → 下载 → 校验 → 复位的完整闭环走真实实现的 ISO-TP/UDS 协议栈，全程免硬件，CI 每次推送复跑。证据级别 ci-simulated——仿真闭环验证的是编排与协议，不是真机刷写结果。</p>
                         <pre class="step-code"><code>racket app/cli.rkt flash examples/plan.sim.json</code></pre>
                     </div>
                     <div class="kit-step">
-                        <h3 data-i18n="s3-title">换上真车</h3>
-                        <p data-i18n="s3-body">改传输参数指向真实 ECU：SocketCAN（Linux）、PEAK PCAN（Windows）或 DoIP 以太网。</p>
+                        <h3 data-i18n="s3-title">指向真实 ECU（先看证据等级）</h3>
+                        <p data-i18n="s3-body">DoIP 是当前唯一 hardware-in-loop verified 的传输；SocketCAN（Linux）与 PEAK PCAN（Windows）为 implemented-unverified——上真机前，把适配器、固件与 ECU 和资格记录对齐。</p>
                         <pre class="step-code"><code>racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1</code></pre>
                     </div>
                 </div>
@@ -186,19 +243,19 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
         </section>
 
         <!-- Download -->
-        <section id="download" class="kit-section kit-section--alt">
+        <section id="download" class="kit-section">
             <div class="kit-container">
                 <span class="kit-kicker" data-i18n="download.kicker">获取</span>
                 <h2 class="kit-h2" data-i18n="download-title">下载</h2>
                 <div class="kit-grid kit-grid--3" style="margin-top: 44px;">
                     <div class="kit-card">
                         <h3>Windows（x64）/ Linux / macOS</h3>
-                        <p data-i18n="dl-cli">v0.1.0 已发布：五个平台架构的 CLI zip + SHA-256 校验，免硬件跑通模拟 ECU 全闭环——五分钟上手见手册。</p>
-                        <p class="card-cta"><a class="kit-btn kit-btn--primary" href="https://github.com/turlamai/flashpilot/releases/latest" data-i18n="dl-watch">前往下载 →</a></p>
+                        <p data-i18n="dl-cli">v0.2.0 已发布：五个平台架构的 CLI zip 加一份核验过的 SHA256SUMS，免装 Racket 跑通模拟 ECU 全闭环；更新为手动替换压缩包，无内置升级器。五分钟上手见手册。</p>
+                        <p class="card-cta"><a class="kit-btn kit-btn--primary" href="https://github.com/turlamai/flashpilot/releases/latest" data-i18n="dl-watch">前往 Releases →</a></p>
                     </div>
                     <div class="kit-card">
                         <h3 data-i18n="dl.host-title">原生宿主</h3>
-                        <p data-i18n="dl-host">原生壳随 Rivet 线推进，三平台安装包随首个发布一起交付。</p>
+                        <p data-i18n="dl-host">三平台原生宿主（SwiftUI / WinUI 3 / GTK4）已在源码内交付刷写面：加载计划、校验并对仿真台架 ECU 执行刷写，三端 e2e 验收通过；宿主安装包尚未随发布交付。</p>
                         <p class="card-cta"><a class="kit-btn kit-btn--secondary" href="https://github.com/turlamai/flashpilot" data-i18n="dl-progress">了解进展 →</a></p>
                     </div>
                     <div class="kit-card">
@@ -208,28 +265,29 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
                             <span class="chip ok">Linux</span>
                             <span class="chip ok">macOS</span>
                         </p>
-                        <p data-i18n="dl-platforms-body">v0.1.0 起三平台 CLI 均已发布（Windows x64；Linux x64 / arm64；macOS arm64 / x64），模拟 ECU 全链路免硬件可跑。这是开发者工具，不做移动端。</p>
+                        <p data-i18n="dl-platforms-body">v0.2.0 起三平台 CLI 均已发布（Windows x64；Linux x64 / arm64；macOS arm64 / x64），模拟 ECU 全链路免硬件可跑（ci-simulated）。这是开发者工具，不做移动端。</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Roadmap -->
-        <section class="kit-section" id="roadmap">
+        <section class="kit-section kit-section--alt" id="roadmap">
             <div class="kit-container">
                 <span class="kit-kicker" data-i18n="roadmap.kicker">路线</span>
                 <h2 class="kit-h2" data-i18n="roadmap-title">路线图</h2>
                 <ul class="roadmap-list">
-                    <li><strong>M1</strong><span data-i18n="rm1">✅ 首个发布 v0.1.0 已交付：三平台 CLI zip 与手册</span></li>
-                    <li><strong>M2</strong><span data-i18n="rm2">UDS over LIN：LIN 传输与调度表</span></li>
-                    <li><strong>M3</strong><span data-i18n="rm3">DoIP 以太网对真实 ECU 加固</span></li>
-                    <li><strong>M4</strong><span data-i18n="rm4">烧录计划库：常见 OEM / 供应商场景开箱即用</span></li>
+                    <li><strong>M1</strong><span data-i18n="rm1">✅ v0.2.0 刷写驾驶舱已交付：身份门、flash 报告、强制 powerGuard、复位后确认门、恢复语义、MCP server、ODX 导入与 LIN / CAN FD（仿真）</span></li>
+                    <li><strong>M2</strong><span data-i18n="rm2">✅ DoIP 真机验证完成：完整闭环在参考 ECU 上连续两次复现（issue #4）</span></li>
+                    <li><strong>M3</strong><span data-i18n="rm3">硬件 LIN 适配器：PLIN / Kvaser（planned）</span></li>
+                    <li><strong>M4</strong><span data-i18n="rm4">PCAN FD：等待硬件验证（planned）</span></li>
+                    <li><strong>M5</strong><span data-i18n="rm5">烧录计划库：常见 OEM / 供应商场景开箱即用</span></li>
                 </ul>
             </div>
         </section>
 
         <!-- Adoption -->
-        <section class="kit-section kit-section--alt" id="start-here">
+        <section class="kit-section" id="start-here">
             <div class="kit-container">
                 <span class="kit-kicker" data-i18n="adoption.kicker">开始使用</span>
                 <h2 class="kit-h2" data-i18n="adoption.title">从一次有效使用开始。</h2>
@@ -273,7 +331,7 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
                     <h4 data-i18n="footer.product">产品</h4>
                     <ul>
                         <li><a href="#why" data-i18n="nav.why">为什么需要</a></li>
-                        <li><a href="#design" data-i18n="nav.design">设计原则</a></li>
+                        <li><a href="#evidence" data-i18n="nav.evidence">证据矩阵</a></li>
                         <li><a href="#download" data-i18n="nav.download">下载</a></li>
                     </ul>
                 </div>
@@ -297,7 +355,7 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
             </div>
             <div class="kit-footer-bottom">
                 <span data-i18n="footer.copyright">© 2026 TuringLambda AI · AGPL-3.0 · 工程证据优先。</span>
-                <span class="kit-mono">site-kit v1.0.2</span>
+                <span class="kit-mono">site-kit v1.0.3</span>
             </div>
         </div>
     </footer>
@@ -306,15 +364,15 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
     <script type="application/json" id="kit-i18n">
     {
         "__meta__": {
-            "zh": { "title": "FlashPilot — Agent 原生的 ECU 刷写", "description": "FlashPilot：免授权费的 vFlash 替代品。声明式烧录计划、UDS over CAN（ISO-TP）/DoIP/LIN、确定性 JSON、永不撒谎的退出码、有界失败证据，为编码 agent 与 CI 而生。Rivet 线——Racket 引擎驱动原生壳。" },
-            "en": { "title": "FlashPilot — Agent-native ECU flashing", "description": "A license-free vFlash alternative: declarative flash plans, UDS over CAN (ISO-TP) / DoIP / LIN, deterministic JSON, exit codes that never lie, bounded failure evidence — built for coding agents and CI. Rivet line — a Racket engine driving native shells." }
+            "zh": { "title": "FlashPilot — Agent 原生的 ECU 刷写", "description": "FlashPilot：AGPL 引擎免费、为编码 agent 与 CI 而生的声明式 ECU 刷写工具。身份门、指纹门、电源守卫三道门禁，flashpilot.report/v1 审计证据链，四级证据矩阵诚实标注支持边界——DoIP 已在参考 ECU 上真机验证。UDS over CAN（ISO-TP）/ DoIP / LIN。" },
+            "en": { "title": "FlashPilot — Agent-native ECU flashing", "description": "A declarative ECU flashing tool with a free AGPL engine, built for coding agents and CI: identity, fingerprint and power-guard gates, flashpilot.report/v1 audit evidence, and a four-level evidence matrix that states the support boundary honestly — DoIP verified on a real reference ECU. UDS over CAN (ISO-TP) / DoIP / LIN." }
         },
         "zh": {
-            "nav.why": "为什么需要", "nav.design": "设计原则", "nav.start": "三步开始",
-            "nav.download": "下载", "nav.guide": "手册", "nav.github": "GitHub",
-            "kicker": "免授权费 · 无常驻进程 · 为 agent 而生",
+            "nav.why": "为什么需要", "nav.design": "设计原则", "nav.evidence": "证据矩阵",
+            "nav.start": "三步开始", "nav.download": "下载", "nav.guide": "手册", "nav.github": "GitHub",
+            "kicker": "AGPL 引擎免费 · 无常驻进程 · 为 agent 与 CI 而生",
             "hero-title": "给 agent 一条诚实的 ECU 烧录线。",
-            "hero-lede": "汽车刷写的现状是 vFlash：按席位收费、Windows GUI、agent 开不动的 COM API。AI 时代，烧录知识的编写成本坍塌了——agent 能照着 OEM 规格书起草烧录计划，剩下的价值在闭环：生成计划 → 校验指纹 → 带保护地烧录 → 收集失败证据 → 重新生成。FlashPilot 就是为这个闭环而生。",
+            "hero-lede": "刷写是不可逆的硬件操作：刷错镜像、擦错目标、电流越界，任何一步都可能变砖。FlashPilot 把安全做成结构而非开关——身份门、指纹门、电源守卫三道门禁依次通过才允许动手，全程落成 flashpilot.report/v1 审计证据，失败自带恢复路径。支持边界以四级证据徽标公开标注：DoIP 已在参考 ECU 上真机验证；仿真目标永远带 ci-simulated 徽标，仿真证据永不宣称生产刷写可靠性。agent 起草计划，FlashPilot 守住闭环。",
             "hero.source": "查看源码",
             "hero.availability": "AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使用。规划有经验证的官方工程资产；付费版尚未开售。",
             "dl.mac": "macOS 版", "dl.win": "Windows 版", "dl.linux": "Linux 版",
@@ -331,35 +389,50 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
             "design.kicker": "原则",
             "design-title": "设计原则",
             "p1-title": "声明式烧录计划",
-            "p1-body": "一份 JSON 描述一个 ECU：段（内联 / BIN / Intel HEX / S-record）、会话、安全访问、擦写校验例程、时序、恢复策略、电源守卫、期望指纹——可版本化、可评审、可复用。",
-            "p2-title": "指纹门禁，先验证后动手",
-            "p2-body": "expectedFingerprint 把镜像钉死在计划里；指纹不对，在任何驱动调用之前就拒绝——刷错的成本是一次变砖，不是一次重跑。",
-            "p3-title": "安全默认",
-            "p3-body": "编程电源守卫轮询电流，越界即断电中止；破坏性计划明说；失败恢复 retry / resetAndRetry 二选一。默认就是安全的，而不是配置出来的。",
-            "p4-title": "退出码永不撒谎",
-            "p4-body": "0 成功 · 1 断言失败 · 2 用法错误 · 3 未找到 · 4 传输错误；每条命令打印一个 JSON 对象——camelCase、字段名稳定、错误文本有界，不用抓屏去猜。",
+            "p1-body": "一份 JSON 描述一个 ECU：段（内联 / BIN / Intel HEX / S-record）、会话、安全访问、擦写校验例程、时序、恢复策略、电源守卫、期望指纹、身份期望——可版本化、可评审、可复用。ODX/PDX 子集导入与计划 lint（段重叠、空洞、缺数据）在任何驱动调用之前拦住坏计划。",
+            "p2-title": "三道门禁，先验证后动手",
+            "p2-body": "身份门先读 expectedIdentity DID——目标不对、DID 不支持、载荷不足，都在任何会话变更之前中止并留下有界证据；指纹门把镜像钉死在计划里，指纹不对在任何驱动调用之前拒绝；复位后确认门轮询 DID，直到 ECU 证明它回来了——卡死的 ECU 拿不到绿灯。",
+            "p3-title": "电源守卫：真表才测量",
+            "p3-body": "powerGuard 是强制执行的条款：接入电表 provider——CI 与台架用确定性仿真 provider，真机接外部 vendor 脚本实时输出 mA，厂商代码留在引擎之外——擦除与每个下载块期间轮询电流，越界即永久中止：物理安全事件绝不盲目重试。没有 provider 的计划不假装测量。",
+            "p4-title": "失败即证据",
+            "p4-body": "--report 把每次刷写写成 flashpilot.report/v1 证据工件：UTC 起始、传输、带耗时的审计步骤、身份/指纹门记录与结局；失败的尝试落同一份报告。错误文本有界，恢复策略 retry / resetAndRetry 强制执行，擦除与下载永不盲目重试——断电重跑从指纹门重新开始。",
+            "p5-title": "退出码永不撒谎",
+            "p5-body": "0 成功 · 1 刷写/断言失败 · 2 用法错误 · 3 未找到 · 4 传输错误；每条命令打印一个 JSON 对象——camelCase、字段名稳定、错误文本有界，不用抓屏去猜。",
+            "p6-title": "Agent 界面：CLI 与 MCP",
+            "p6-body": "无常驻进程 CLI 之外，同一引擎讲 stdio MCP：flashpilot_validate / flashpilot_flash / flashpilot_request / flashpilot_udid / flashpilot_odx_import 五个 agent 工具，CI 冒烟测试守住接口面——agent 用母语跑完整条烧录链。",
+            "ev.kicker": "证据",
+            "ev-title": "支持边界，按证据说话",
+            "ev-lede": "支持矩阵的权威载体是代码：flashpilot transports --json 输出每个传输/适配器子集的证据级别；文档与 CLI 输出由测试锁死，不会漂移。",
+            "ev.l1-d": "存在版本化适配器 + 参考 ECU 复现报告（issue #4 门禁）；宣称仅限该适配器/ECU 类别，绝不外推到任意 ECU。",
+            "ev.l2-d": "完整闭环（会话 → 安全访问 → 擦除 → 下载 → 校验 → 复位）在每次推送的 CI 中对仿真 ECU 运行。",
+            "ev.l3-d": "代码随源发布并尽可能单测；尚无实体适配器 + 参考 ECU 的复现报告。",
+            "ev.l4-d": "明示未实现，避免猜测。",
+            "ev.th-transport": "传输", "ev.th-platform": "平台", "ev.th-evidence": "证据级别",
+            "ev.p-cross": "跨平台", "ev.p-adapter": "适配器相关",
+            "ev-note": "仿真证据永不宣称生产刷写可靠性；hardware-in-loop verified 仅随版本化适配器 + 参考 ECU 复现报告新增，公开报告中厂商身份一律脱敏。DoIP 真机证据（2026-11）：诊断会话、安全访问、预检例程、切片擦除（110+ 轮进行中）、538 块下载、校验与激活例程、复位后身份门的完整闭环，在参考 ECU 上经普通以太网（DoIP TCP、Windows 宿主）连续两次复现。完整报告与恢复语义：",
             "start.kicker": "上手",
             "start-title": "三步开始",
             "s1-title": "装上引擎",
-            "s1-body": "Racket 包一行装好，引擎与 CLI 即在本地可用。",
-            "s2-title": "内置模拟 ECU 空跑闭环",
-            "s2-body": "默认传输是内置模拟 ECU——真实的 ISO-TP/UDS 栈，全程无需硬件，CI 里也能跑完整烧录闭环。",
-            "s3-title": "换上真车",
-            "s3-body": "改传输参数指向真实 ECU：SocketCAN（Linux）、PEAK PCAN（Windows）或 DoIP 以太网。",
+            "s1-body": "从 Releases 下载对应平台的 CLI zip（免装 Racket），或从源码一行装好引擎与 CLI。",
+            "s2-title": "仿真 ECU 空跑闭环",
+            "s2-body": "默认传输是内置模拟 ECU：会话 → 安全访问 → 擦除 → 下载 → 校验 → 复位的完整闭环走真实实现的 ISO-TP/UDS 协议栈，全程免硬件，CI 每次推送复跑。证据级别 ci-simulated——仿真闭环验证的是编排与协议，不是真机刷写结果。",
+            "s3-title": "指向真实 ECU（先看证据等级）",
+            "s3-body": "DoIP 是当前唯一 hardware-in-loop verified 的传输；SocketCAN（Linux）与 PEAK PCAN（Windows）为 implemented-unverified——上真机前，把适配器、固件与 ECU 和资格记录对齐。",
             "download.kicker": "获取",
             "download-title": "下载",
             "dl.host-title": "原生宿主",
-            "dl-cli": "v0.1.0 已发布：五个平台架构的 CLI zip + SHA-256 校验，免硬件跑通模拟 ECU 全闭环——五分钟上手见手册。",
-            "dl-host": "原生壳随 Rivet 线推进，三平台安装包随首个发布一起交付。",
-            "dl-watch": "前往下载 →", "dl-progress": "了解进展 →",
+            "dl-cli": "v0.2.0 已发布：五个平台架构的 CLI zip 加一份核验过的 SHA256SUMS，免装 Racket 跑通模拟 ECU 全闭环；更新为手动替换压缩包，无内置升级器。五分钟上手见手册。",
+            "dl-host": "三平台原生宿主（SwiftUI / WinUI 3 / GTK4）已在源码内交付刷写面：加载计划、校验并对仿真台架 ECU 执行刷写，三端 e2e 验收通过；宿主安装包尚未随发布交付。",
+            "dl-watch": "前往 Releases →", "dl-progress": "了解进展 →",
             "dl-platforms-title": "平台",
-            "dl-platforms-body": "v0.1.0 起三平台 CLI 均已发布（Windows x64；Linux x64 / arm64；macOS arm64 / x64），模拟 ECU 全链路免硬件可跑。这是开发者工具，不做移动端。",
+            "dl-platforms-body": "v0.2.0 起三平台 CLI 均已发布（Windows x64；Linux x64 / arm64；macOS arm64 / x64），模拟 ECU 全链路免硬件可跑（ci-simulated）。这是开发者工具，不做移动端。",
             "roadmap.kicker": "路线",
             "roadmap-title": "路线图",
-            "rm1": "✅ 首个发布 v0.1.0 已交付：三平台 CLI zip 与手册",
-            "rm2": "UDS over LIN：LIN 传输与调度表",
-            "rm3": "DoIP 以太网对真实 ECU 加固",
-            "rm4": "烧录计划库：常见 OEM / 供应商场景开箱即用",
+            "rm1": "✅ v0.2.0 刷写驾驶舱已交付：身份门、flash 报告、强制 powerGuard、复位后确认门、恢复语义、MCP server、ODX 导入与 LIN / CAN FD（仿真）",
+            "rm2": "✅ DoIP 真机验证完成：完整闭环在参考 ECU 上连续两次复现（issue #4）",
+            "rm3": "硬件 LIN 适配器：PLIN / Kvaser（planned）",
+            "rm4": "PCAN FD：等待硬件验证（planned）",
+            "rm5": "烧录计划库：常见 OEM / 供应商场景开箱即用",
             "adoption.kicker": "开始使用", "adoption.title": "从一次有效使用开始。",
             "adoption.status": "AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使用。规划有经验证的官方工程资产；付费版尚未开售。",
             "adoption.p1": "桌面源码和预览路径面向 macOS、Windows、Linux。发布压缩包不表示所有适配器、ECU 和总线均已合格。",
@@ -376,11 +449,11 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
             "footer.copyright": "© 2026 TuringLambda AI · AGPL-3.0 · 工程证据优先。"
         },
         "en": {
-            "nav.why": "Why", "nav.design": "Design", "nav.start": "Get started",
-            "nav.download": "Download", "nav.guide": "Manual", "nav.github": "GitHub",
-            "kicker": "License-free · no resident process · built for agents",
+            "nav.why": "Why", "nav.design": "Design", "nav.evidence": "Evidence",
+            "nav.start": "Get started", "nav.download": "Download", "nav.guide": "Manual", "nav.github": "GitHub",
+            "kicker": "Free AGPL engine · no resident process · built for agents and CI",
             "hero-title": "An honest ECU flashing line for agents.",
-            "hero-lede": "Automotive flashing today means vFlash: per-seat licenses, a Windows GUI, and a COM API agents cannot drive. In the AI era the authoring cost of flashing knowledge collapses — an agent can draft a flash plan from an OEM spec. The value left is the loop: generate a plan → verify its fingerprint → flash with guards → collect evidence on failure → regenerate. FlashPilot is built around that loop.",
+            "hero-lede": "Flashing is irreversible hardware work: a wrong image, a wrong target, an out-of-band current spike — any one of them can brick an ECU. FlashPilot makes safety structure, not a switch: the identity gate, the fingerprint gate and the power guard must all pass before the engine touches anything, and every step lands in a flashpilot.report/v1 audit trail with recovery paths on failure. Support boundaries are labeled with four honest evidence levels: DoIP is verified on a real reference ECU; simulated targets always carry the ci-simulated badge, and simulated evidence never claims production flashing reliability. Agents draft the plan; FlashPilot guards the loop.",
             "hero.source": "View source",
             "hero.availability": "The AGPL engine, CLI and MCP remain free, including CI use under the existing licence. Validated official engineering assets are planned; no paid edition is on sale.",
             "dl.mac": "For macOS", "dl.win": "For Windows", "dl.linux": "For Linux",
@@ -397,35 +470,50 @@ raco pkg install --auto --name flashpilot --link racket</code></pre>
             "design.kicker": "Principles",
             "design-title": "Design principles",
             "p1-title": "Declarative flash plans",
-            "p1-body": "One JSON document per ECU: segments (inline / BIN / Intel HEX / S-record), session, security access, erase & verify routines, timings, recovery strategy, power guard, expected fingerprint — versionable, reviewable, reusable.",
-            "p2-title": "Fingerprint gate: verify before you touch",
-            "p2-body": "expectedFingerprint pins the image inside the plan; on mismatch FlashPilot rejects it before any driver call — a wrong flash costs a bricked ECU, not a rerun.",
-            "p3-title": "Safe by default",
-            "p3-body": "The in-programming power guard polls current and cuts power on out-of-band readings; destructive plans say so; recovery is retry or reset-and-retry. Safety is the default, not a configuration.",
-            "p4-title": "Exit codes that never lie",
-            "p4-body": "0 ok · 1 assert failed · 2 usage · 3 not found · 4 transport. Every command prints one JSON object — camelCase, stable field names, bounded error text. No screen-scraping, no guessing.",
+            "p1-body": "One JSON document per ECU: segments (inline / BIN / Intel HEX / S-record), session, security access, erase & verify routines, timings, recovery strategy, power guard, expected fingerprint, expected identity — versionable, reviewable, reusable. ODX/PDX subset import and plan lint (overlaps, gaps, missing data) stop bad plans before any driver call.",
+            "p2-title": "Three gates: verify before you touch",
+            "p2-body": "The identity gate reads the expectedIdentity DID first — wrong target, unsupported DID or short payload aborts before any session change, with bounded evidence. The fingerprint gate pins the image inside the plan and rejects a mismatch before any driver call. The post-reset gate polls a DID until the ECU proves it came back — a wedged ECU never gets a green run.",
+            "p3-title": "Power guard: no fake meters",
+            "p3-body": "powerGuard is enforced, not parsed: attach a meter provider — a deterministic sim provider for CI and benches, or an external vendor script printing live mA on stdout (vendor code stays outside the engine) — and the engine polls current through erase and every download block, aborting permanently on out-of-band readings: a physical safety event is never blindly retried. A plan without a provider never pretends to measure.",
+            "p4-title": "Failure is evidence",
+            "p4-body": "--report writes every run as a flashpilot.report/v1 evidence artifact: UTC start, transport, audited steps with timings, identity/fingerprint gate records and the outcome; failed attempts write the same report. Error text is bounded, recovery (retry / resetAndRetry) is enforced, and erase/download are never blindly retried — after a power loss, the re-run starts back at the fingerprint gate.",
+            "p5-title": "Exit codes that never lie",
+            "p5-body": "0 ok · 1 flash/assert failed · 2 usage · 3 not found · 4 transport. Every command prints one JSON object — camelCase, stable field names, bounded error text. No screen-scraping, no guessing.",
+            "p6-title": "Agent surface: CLI and MCP",
+            "p6-body": "Beyond the resident-free CLI, the same engine speaks MCP over stdio: flashpilot_validate, flashpilot_flash, flashpilot_request, flashpilot_udid and flashpilot_odx_import as agent tools, smoke-gated in CI — agents drive the whole flashing chain in their native tongue.",
+            "ev.kicker": "Evidence",
+            "ev-title": "Support boundaries, stated as evidence",
+            "ev-lede": "The authoritative matrix lives in code: flashpilot transports --json emits an evidence level for every transport/adapter subset, and the docs cannot drift from the CLI output without a failing test.",
+            "ev.l1-d": "A versioned adapter + reference-ECU reproduction report exists (the issue #4 gate); claims are scoped to that adapter/ECU class, never extrapolated to arbitrary ECUs.",
+            "ev.l2-d": "The complete loop (session → security access → erase → download → verify → reset) runs against the simulated ECU in CI on every push.",
+            "ev.l3-d": "Code ships and is unit-tested where possible; no physical adapter + reference ECU has reproduced it yet.",
+            "ev.l4-d": "Not implemented — named so nobody guesses.",
+            "ev.th-transport": "Transport", "ev.th-platform": "Platform", "ev.th-evidence": "Evidence",
+            "ev.p-cross": "cross-platform", "ev.p-adapter": "adapter-dependent",
+            "ev-note": "Simulated evidence never claims production flashing reliability; hardware-in-loop verified is added only with a versioned adapter + reference-ECU reproduction report, and vendor identity stays redacted in public reports. The DoIP hardware evidence (2026-11): the complete loop — diagnostic session, security access, precheck routine, sliced erase (110+ in-progress rounds), 538-block download, verify & activate routines, post-reset identity gate — reproduced twice consecutively on a reference ECU over plain Ethernet (DoIP TCP, Windows host). Full report and recovery semantics:",
             "start.kicker": "Get started",
             "start-title": "Get started in three steps",
             "s1-title": "Install the engine",
-            "s1-body": "One line installs the Racket package; the engine and CLI are ready locally.",
-            "s2-title": "Run the loop hardware-free",
-            "s2-body": "The default transport is a built-in simulated ECU — the real ISO-TP/UDS stack, no hardware required, and the full flashing loop runs in CI.",
-            "s3-title": "Point it at a real ECU",
-            "s3-body": "Switch the transport: SocketCAN (Linux), PEAK PCAN (Windows), or DoIP over Ethernet.",
+            "s1-body": "Grab the CLI zip for your platform from Releases (no Racket needed), or install the engine from source in one line.",
+            "s2-title": "Dry-run the loop on the simulated ECU",
+            "s2-body": "The default transport is a built-in simulated ECU: the full loop — session → security access → erase → download → verify → reset — runs the real ISO-TP/UDS stack, hardware-free, re-run in CI on every push. Evidence level ci-simulated: the simulated loop proves orchestration and protocol, not real-hardware flashing results.",
+            "s3-title": "Point it at a real ECU (check the evidence level first)",
+            "s3-body": "DoIP is the only hardware-in-loop verified transport today; SocketCAN (Linux) and PEAK PCAN (Windows) are implemented-unverified — match adapter, firmware and ECU to a recorded qualification before real hardware.",
             "download.kicker": "Get it",
             "download-title": "Download",
             "dl.host-title": "Native hosts",
-            "dl-cli": "v0.1.0 is out: five platform/arch CLI zips with SHA-256 checksums, and the full simulated-ECU loop runs hardware-free — see the manual for a five-minute start.",
-            "dl-host": "Native hosts advance with the Rivet line; three-platform installers land with the first release.",
-            "dl-watch": "Get v0.1.0 →", "dl-progress": "Follow progress →",
+            "dl-cli": "v0.2.0 is out: five platform/arch CLI zips plus one verified SHA256SUMS; run the full simulated-ECU loop hardware-free without installing Racket. Updates are manual (replace the archive) — no in-app updater. Five-minute start in the manual.",
+            "dl-host": "The three native hosts (SwiftUI / WinUI 3 / GTK4) ship a flash surface in source: load a plan, verify it and flash the simulated bench ECU, with e2e acceptance on all three. Host installers are not published with releases yet.",
+            "dl-watch": "Get it from Releases →", "dl-progress": "Follow progress →",
             "dl-platforms-title": "Platforms",
-            "dl-platforms-body": "From v0.1.0 all three desktop platforms ship (Windows x64; Linux x64 / arm64; macOS arm64 / x64) and the simulated-ECU loop runs hardware-free. A developer tool — no mobile.",
+            "dl-platforms-body": "From v0.2.0 all three desktop platforms ship CLI zips (Windows x64; Linux x64 / arm64; macOS arm64 / x64), and the simulated-ECU loop runs hardware-free (ci-simulated). A developer tool — no mobile.",
             "roadmap.kicker": "Roadmap",
             "roadmap-title": "Roadmap",
-            "rm1": "✅ First release shipped: v0.1.0 — three-platform CLI zips and the manual",
-            "rm2": "UDS over LIN: LIN transport and schedule tables",
-            "rm3": "DoIP Ethernet hardening against real ECUs",
-            "rm4": "Plan library: common OEM / supplier scenarios out of the box",
+            "rm1": "✅ v0.2.0, the flashing cockpit: identity gate, flash reports, enforced powerGuard, post-reset gate, recovery semantics, MCP server, ODX import and LIN / CAN FD (simulated)",
+            "rm2": "✅ DoIP verified on hardware: the complete loop reproduced twice consecutively on a reference ECU (issue #4)",
+            "rm3": "Hardware LIN adapters: PLIN / Kvaser (planned)",
+            "rm4": "PCAN FD (planned, waiting on hardware verification)",
+            "rm5": "Plan library: common OEM / supplier scenarios out of the box",
             "adoption.kicker": "Get started", "adoption.title": "Start with one useful session.",
             "adoption.status": "The AGPL engine, CLI and MCP remain free, including CI use under the existing licence. Validated official engineering assets are planned; no paid edition is on sale.",
             "adoption.p1": "Desktop source/preview paths target macOS, Windows and Linux. The published archive set does not imply every adapter, ECU or bus has been qualified.",
