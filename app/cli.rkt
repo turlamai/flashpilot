@@ -370,7 +370,7 @@
      (define exit-code
        (with-handlers
            ([cli-error? cli-error-exit-code]
-            [exn:benchpilot:validation?
+            [exn:flashpilot:validation?
              (lambda (e)
                (print-result (hasheq 'ok #f 'code "validation" 'error (exn-message e)))
                2)]

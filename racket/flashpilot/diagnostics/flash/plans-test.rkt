@@ -29,27 +29,27 @@
     (check-equal? (identity-check-value (second checks)) '(0 #xff)))
 
   (test-case "both value and valueHex is a validation error"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda ()
                  (parse
                   "{\"expectedIdentity\":[{\"did\":1,\"value\":\"a\",\"valueHex\":\"00\"}]}"))))
 
   (test-case "neither value nor valueHex is a validation error"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"expectedIdentity\":[{\"did\":1}]}"))))
 
   (test-case "bad or out-of-range DID is a validation error"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"expectedIdentity\":[{\"did\":\"zz\",\"value\":\"a\"}]}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"expectedIdentity\":[{\"did\":65536,\"value\":\"a\"}]}"))))
 
   (test-case "empty value is a validation error"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"expectedIdentity\":[{\"did\":1,\"value\":\"\"}]}"))))
 
   (test-case "non-list expectedIdentity is a validation error"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"expectedIdentity\":{\"did\":1}}"))))
 
   (test-case "identity-json serializes to did + valueHex"
@@ -88,13 +88,13 @@
     (check-false (routine-step-timeout-ms (second steps))))
 
   (test-case "routineSteps reject bad position, id and timeout"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"routineSteps\":[{\"at\":\"mid-verify\",\"routineId\":1}]}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":65536}]}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":1,\"timeoutMs\":0}]}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"routineSteps\":[{\"at\":\"before-erase\",\"routineId\":1,\"record\":\"abc\"}]}"))))
 
   (test-case "postResetGate parses did/value/timeout/interval"
@@ -111,11 +111,11 @@
       (uds-flash-plan-post-reset-gate
        (parse "{\"postResetGate\":{\"did\":65280,\"valueHex\":\"7265616479\",\"timeoutMs\":1000}}")))
     (check-equal? (post-reset-gate-interval-ms gate) 500)
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"postResetGate\":{\"did\":1,\"value\":\"a\",\"valueHex\":\"00\",\"timeoutMs\":100}}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"postResetGate\":{\"did\":1,\"value\":\"a\"}}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"postResetGate\":{\"did\":1,\"value\":\"a\",\"timeoutMs\":0}}"))))
 
   (test-case "powerGuard parses bounds and the required provider"
@@ -142,25 +142,25 @@
     (check-equal? (power-provider-ma prov) 9))
 
   (test-case "powerGuard without a provider is a validation error"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"powerGuard\":{\"minMa\":5,\"maxMa\":1500}}"))))
 
   (test-case "powerGuard rejects unknown provider kind and non-integer bounds"
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"powerGuard\":{\"minMa\":5,\"maxMa\":1500,\"provider\":{\"kind\":\"magic\"}}}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"powerGuard\":{\"minMa\":\"x\",\"maxMa\":1500,\"provider\":{\"kind\":\"sim\"}}}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"powerGuard\":{\"minMa\":5,\"maxMa\":1500,\"provider\":{\"kind\":\"command\"}}}"))))
 
   (test-case "erasePoll rejects out-of-range or missing fields"
     (define (parse-erase json) (parse json))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"erasePoll\":{\"statusByte\":256,\"maxRounds\":1,\"roundTimeoutMs\":10}}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"erasePoll\":{\"statusByte\":\"0x55\",\"roundTimeoutMs\":10}}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"erasePoll\":{\"statusByte\":\"0x55\",\"maxRounds\":0,\"roundTimeoutMs\":10}}")))
-    (check-exn exn:benchpilot:validation?
+    (check-exn exn:flashpilot:validation?
                (lambda () (parse "{\"erasePoll\":{\"statusByte\":\"0x55\",\"maxRounds\":2}}"))))
 )

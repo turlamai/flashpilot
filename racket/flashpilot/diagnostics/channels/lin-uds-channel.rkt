@@ -80,7 +80,7 @@
       (thread
        (lambda ()
          (let loop ()
-           (with-handlers ([exn:benchpilot:cancelled? (lambda (_) (void))])
+           (with-handlers ([exn:flashpilot:cancelled? (lambda (_) (void))])
              (define request (lin-endpoint-receive! endpoint))
              (define response (uds-processor-process! processor request))
              (when (and (>= (uds-server-response-delay-ms response) 0)

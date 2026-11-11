@@ -433,30 +433,30 @@
 ;; and the HTTP status mapping exactly like the C# host catch chain.
 ;; ----------------------------------------------------------------------------
 
-(struct exn:benchpilot exn:fail () #:transparent)
-(struct exn:benchpilot:validation exn:benchpilot () #:transparent)
-(struct exn:benchpilot:target-not-found exn:benchpilot () #:transparent)
-(struct exn:benchpilot:busy
-        exn:benchpilot
+(struct exn:flashpilot exn:fail () #:transparent)
+(struct exn:flashpilot:validation exn:flashpilot () #:transparent)
+(struct exn:flashpilot:target-not-found exn:flashpilot () #:transparent)
+(struct exn:flashpilot:busy
+        exn:flashpilot
         (target-id operation busy-scope busy-id owner-operation-id owner-operation)
   #:transparent)
-(struct exn:benchpilot:deadline-exceeded
-        exn:benchpilot
+(struct exn:flashpilot:deadline-exceeded
+        exn:flashpilot
         (target-id operation deadline-ms deadline-at-millis)
   #:transparent)
-(struct exn:benchpilot:cancelled exn:benchpilot () #:transparent)
+(struct exn:flashpilot:cancelled exn:flashpilot () #:transparent)
 
 (define (make-cancelled-error)
-  (exn:benchpilot:cancelled "Request cancelled." (current-continuation-marks)))
+  (exn:flashpilot:cancelled "Request cancelled." (current-continuation-marks)))
 
 (define (string-blank? s)
   (or (not (string? s)) (zero? (string-length (string-trim s)))))
 
 (define (make-validation-error message)
-  (exn:benchpilot:validation message (current-continuation-marks)))
+  (exn:flashpilot:validation message (current-continuation-marks)))
 
 (define (make-target-not-found-error message)
-  (exn:benchpilot:target-not-found message (current-continuation-marks)))
+  (exn:flashpilot:target-not-found message (current-continuation-marks)))
 
 (define (raise-validation message)
   (raise (make-validation-error message)))
@@ -479,7 +479,7 @@
               owner)))
 
 (define (make-busy-error target-id operation busy-scope busy-id owner-operation-id owner-operation)
-  (exn:benchpilot:busy
+  (exn:flashpilot:busy
    (busy-message target-id operation busy-scope busy-id owner-operation-id owner-operation)
    (current-continuation-marks)
    target-id
@@ -490,7 +490,7 @@
    owner-operation))
 
 (define (make-deadline-error target-id operation deadline-ms deadline-at-millis)
-  (exn:benchpilot:deadline-exceeded
+  (exn:flashpilot:deadline-exceeded
    (format "Target '~a' operation '~a' exceeded its Runtime deadline of ~a ms."
            target-id
            operation

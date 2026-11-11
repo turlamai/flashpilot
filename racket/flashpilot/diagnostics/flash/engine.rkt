@@ -291,7 +291,7 @@
               (fail! (exn-message e)
                      (and (exn:fail:uds-nrc e)
                           (format "0x~a" (hex-up (exn:fail:uds-nrc e) 2)))))]
-           [exn:benchpilot:cancelled?
+           [exn:flashpilot:cancelled?
             (lambda (e)
               (add-step! (flash-step-summary "abort" #f (exn-message e) (elapsed-ms) #f))
               (raise (exn:fail:flash:permanent

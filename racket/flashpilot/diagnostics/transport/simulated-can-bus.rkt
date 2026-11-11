@@ -126,7 +126,7 @@
     (set-box! (sim-tester-port-pump-thread-box bus)
               (thread (lambda ()
                         (let loop ()
-                          (with-handlers ([exn:benchpilot:cancelled? (lambda (_) (void))])
+                          (with-handlers ([exn:flashpilot:cancelled? (lambda (_) (void))])
                             (define frame (sim-can-port-receive! (sim-tester-port-port bus) #f))
                             (define listener (unbox (sim-tester-port-listener-box bus)))
                             (when listener

@@ -92,7 +92,7 @@
       (file->string plan-path)))
   (define hardening
     (with-handlers ([exn:verify-abort? raise]
-                    [exn:benchpilot:validation?
+                    [exn:flashpilot:validation?
                      (lambda (e) (verify-abort "plan-invalid" (exn-message e)))])
       (read-flash-plan-json text)))
   (define plan (uds-flash-hardening-plan hardening))
@@ -103,7 +103,7 @@
           seg
           (with-handlers
               ([exn:verify-abort? raise]
-               [exn:benchpilot:validation?
+               [exn:flashpilot:validation?
                 (lambda (e)
                   (define message (exn-message e))
                   (if (string-prefix? message "Flash plan segment file not found")
