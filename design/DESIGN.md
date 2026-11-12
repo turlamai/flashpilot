@@ -18,24 +18,18 @@
 - **数据即证据**：所有 hex/地址/指纹/DID/JSON/UTC 时间戳一律等宽字体且可选中复制；字段名与 CLI/MCP JSON 输出保持同名，界面结论可点回原始 report。
 - **内容至上与键盘可达**（HIG 内核）：chrome 退后，审计时间线与报告字段是主角；每个操作有键盘路径与可见提示，焦点环清晰可见。
 
-## Tokens（推导依据见 Brief；实现落地时 1:1 采用）
+## Tokens（语义与推导依据；值不在此复制）
 
-| Token | Light | Dark | 用途 |
-|---|---|---|---|
-| `--bg` | `#FAF8F5` | `#16120F` | 画布（kit `--kit-bg`） |
-| `--surface` | `#FFFFFF` | `#1F1A16` | 卡片/浮层（kit `--kit-bg-elevated`） |
-| `--raised` | `#F3EFE9` | `#262019` | 悬浮/选中底（kit `--kit-surface`） |
-| `--line` | `#E6E1D8` | `#332C25` | 分隔（kit `--kit-border` 12% 实体化） |
-| `--ink` | `#201B16` | `#F1ECE5` | 主文字（kit `--kit-text`） |
-| `--mute` | `#8A8177` | `#A89F93` | 次级文字（kit `--kit-text-3`/`-2`） |
-| `--accent` | `#D97757` | `#E08A6B` | 当前选中/交互入口/进行态（kit `--kit-accent`） |
-| `--accent-soft` | `#FAEFEB` | `#32231C` | accent 弱底（kit `--kit-accent-soft` 实体化） |
-| `--ok` | `#2F7D46` | `#63C58B` | 成功/检查通过/`hardware-in-loop verified`（新推导） |
-| `--ok-soft` | `#E7F1E9` | `#1E3028` | ok 徽标弱底 |
-| `--warn` | `#B26B1B` | `#E5A54B` | 警告/`implemented-unverified`/lint finding（新推导） |
-| `--warn-soft` | `#F9EFDD` | `#332A19` | warn 徽标弱底 |
-| `--danger` | `#C23B2E` | `#F2776B` | 失败/破坏性动作/safety abort（新推导） |
-| `--danger-soft` | `#F9E9E6` | `#362019` | danger 徽标弱底 |
+值类 token 真源 = `site/family.css`（家族 kit）+ 本产品状态色推导；原型 `design/prototype/shared.css` 与其一一对应，本表只记语义、来源与推导依据。中性色与 accent 取 kit 现行值（已含亮暗两态）；`--ok/--warn/--danger` 系按 HIG 语义与暖纸底色新推导（依据：与 terracotta accent 可区分 + 双态 WCAG AA）。
+
+| Token | 语义 | 来源 |
+|---|---|---|
+| `--bg --surface --raised --line` | 画布/卡片/悬浮/分隔 中性系 | kit 原值（`--line` 为 kit border 12% 实体化） |
+| `--ink --mute` | 主/次级文字 | kit 原值 |
+| `--accent --accent-soft` | 当前选中/交互入口/进行态 | kit 原值（soft 实体化） |
+| `--ok --ok-soft` | 成功/检查通过/`hardware-in-loop verified` | 新推导（AA 双态） |
+| `--warn --warn-soft` | 警告/`implemented-unverified`/lint finding | 新推导（AA 双态） |
+| `--danger --danger-soft` | 失败/破坏性动作/safety abort | 新推导（AA 双态） |
 
 - **字体**：界面 `system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei"`；数据/日志 `ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace`（三宿主现状已用 Consolas/`.monospaced`，提升为契约）。正文 13.5px/1.55（工具密度），面板标题 600，次级 12.5px，辅助 11px，数据一律 mono。
 - **圆角**：窗口 12px · 卡片 10px · 控件 6px。**间距节奏**：4/8/12/16/24。**动效**：120ms ease；spinner 1s linear。
