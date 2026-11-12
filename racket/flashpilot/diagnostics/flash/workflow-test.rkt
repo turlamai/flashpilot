@@ -350,7 +350,15 @@
                                   "500 mA outside [600, 1500]")))
 
   (test-case "powerGuard command provider reads real process output"
-    (define channel (make-sim-uds-channel))
+    ;; The provider spawns a real second Racket VM; under a loaded CI
+    ;; runner that startup can exceed the default 5000 ms S3 session
+    ;; timeout, after which the ECU rejects the routine with 0x7F.
+    ;; Relax S3 for this case only — the assertion (real subprocess
+    ;; output read back as a current reading) is unchanged.
+    (define channel
+      (make-sim-uds-channel
+       #:ecu-options (struct-copy uds-ecu-options (default-uds-ecu-options)
+                                  [s3-timeout-ms 60000])))
     (define plan
       (struct-copy uds-flash-plan (flash-plan-for test-image)
                    [power-guard
