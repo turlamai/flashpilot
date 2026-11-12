@@ -32,7 +32,7 @@ jobs:
         shell: pwsh
         run: |
           raco pkg install --auto --name flashpilot --link racket
-          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#d6e98896fffa3f484e9ea0162d807ad2518c1538"
+          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#v0.16.0"
       - name: Run executable acceptance contract
         shell: pwsh
         run: |
@@ -70,7 +70,7 @@ jobs:
       - name: Install local package and pinned Rivet
         run: |
           raco pkg install --auto --name flashpilot --link racket
-          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#d6e98896fffa3f484e9ea0162d807ad2518c1538"
+          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#v0.16.0"
       - name: Run executable acceptance contract
         run: |
           set -euo pipefail
@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up embeddable Racket CS
-        uses: turlamai/rivet/.github/actions/setup-embed-racket@d6e98896fffa3f484e9ea0162d807ad2518c1538
+        uses: turlamai/rivet/.github/actions/setup-embed-racket@v0.16.0
       - name: Install native dependencies, local package, and pinned Rivet
         run: |
           set -euo pipefail
@@ -108,7 +108,7 @@ jobs:
             libgtk-4-dev libsecret-1-dev liblz4-dev zlib1g-dev libncurses-dev \
             python3-pyatspi weston
           raco pkg install --auto --name flashpilot --link racket
-          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#d6e98896fffa3f484e9ea0162d807ad2518c1538"
+          raco pkg install --auto --no-docs "https://github.com/turlamai/rivet.git#v0.16.0"
       - name: Run executable acceptance contract
         run: |
           set -euo pipefail
