@@ -1,7 +1,7 @@
 /* ==== FlashPilot 原型共享壳层 — tokens 与组件，见 design/DESIGN.md ==== */
 :root {
   --bg: #FAF8F5; --surface: #FFFFFF; --raised: #F3EFE9; --line: #E6E1D8;
-  --ink: #201B16; --mute: #8A8177; --accent: #D97757; --accent-soft: #FAEFEB;
+  --ink: #201B16; --mute: #6F675E; --accent: #D97757; --accent-soft: #FAEFEB;
   --ok: #2F7D46; --ok-soft: #E7F1E9;
   --warn: #B26B1B; --warn-soft: #F9EFDD;
   --danger: #C23B2E; --danger-soft: #F9E9E6;
@@ -61,17 +61,19 @@ body {
   font-size: 13.5px; color: var(--ink); cursor: default; user-select: none; transition: background .12s ease;
 }
 .item:hover { background: var(--raised); }
+.item.disabled { opacity: .38; pointer-events: none; }
 .item .kb {
   width: 16px; height: 16px; border-radius: 4px; display: grid; place-items: center;
-  font-size: 10.5px; color: var(--mute); background: var(--raised); border: 1px solid var(--line);
+  font-size: 11px; color: var(--mute); background: var(--raised); border: 1px solid var(--line);
 }
 .item.active { background: var(--raised); font-weight: 600; box-shadow: inset 2px 0 0 var(--accent); }
 .item.active .kb { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
 .item .pill {
-  margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--accent);
+  margin-left: auto; font-size: 11px; font-weight: 600; color: var(--accent);
   background: var(--accent-soft); border-radius: 99px; padding: 1px 7px;
 }
 .sidebar .foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 10px 8px 2px; border-top: 1px solid var(--line); }
+.navlock { font-size: 11px; line-height: 1.45; color: var(--mute); padding: 14px 8px 0; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .foot .st { font-size: 12px; color: var(--mute); }
 .foot .sp { flex: 1; }
@@ -99,7 +101,7 @@ button:focus-visible, .item:focus-visible {
 }
 .statusbar .sp { flex: 1; }
 kbd {
-  font-family: inherit; font-size: 10.5px; color: var(--mute);
+  font-family: inherit; font-size: 11px; color: var(--mute);
   background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
 }
 /* ---- 面板与徽标 ---- */
@@ -119,7 +121,17 @@ kbd {
 .badge.warn { background: var(--warn-soft); color: var(--warn); }
 .badge.danger { background: var(--danger-soft); color: var(--danger); }
 .badge.accent { background: var(--accent-soft); color: var(--accent); }
-.level { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .1px; }
+/* evidence level: ci-simulated is a provenance marker, not a selection/active state */
+.badge.ci {
+  background: color-mix(in srgb, var(--surface) 72%, var(--raised));
+  color: var(--ink); border: 1px dashed color-mix(in srgb, var(--ink) 34%, transparent);
+}
+.simtag {
+  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .2px;
+  color: var(--ink); border: 1px dashed color-mix(in srgb, var(--ink) 34%, transparent);
+  border-radius: 4px; padding: 0 5px; white-space: nowrap;
+}
+.level { font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .1px; }
 .mono { font-family: var(--mono); font-size: 12px; }
 .mute { color: var(--mute); }
 .spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent); border-top-color: transparent; animation: spin 1s linear infinite; }

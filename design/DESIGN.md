@@ -37,13 +37,13 @@
 
 ## 组件词汇
 
-`TargetCard`（目标身份 + evidence level 徽标）· `TransportRow`（适配器/传输组合行 + level 徽标）· `ReadinessCheck`（通过/警告/失败 + check code）· `PlanRow`（清单行 + 校验状态 chip）· `VerificationCard`（findings + segment layout + fingerprint gate）· `GateStrip`（三道门事实条：identity / fingerprint / powerGuard）· `ConfirmDialog`（不可逆确认，Cancel 默认焦点）· `StepTimeline`（审计步骤时间线：done/in-progress/pending + 耗时）· `PowerMeter`（实时电流 + 上限条）· `EvidenceReport`（report 字段表 + bounded error + 恢复面板）· `LevelBadge`（证据级全称 chip；色彩映射固定：`hardware-in-loop verified`=ok · `ci-simulated`=accent（仿真态是产品基线状态，兼作当前选中语义）· `implemented-unverified`=warn · `planned`=mute）· `Toggle` / `Segmented` · `Toast`。
+`TargetCard`（目标身份 + evidence level 徽标）· `TransportRow`（适配器/传输组合行 + level 徽标）· `ReadinessCheck`（通过/警告/失败 + check code）· `PlanRow`（清单行 + 校验状态 chip）· `VerificationCard`（findings + segment layout + fingerprint gate）· `GateStrip`（三道门事实条：identity / fingerprint / powerGuard）· `ConfirmDialog`（不可逆确认，Cancel 默认焦点）· `StepTimeline`（审计步骤时间线：done/in-progress/pending + 耗时）· `PowerMeter`（实时电流 + 上限条）· `EvidenceReport`（report 字段表 + bounded error + 恢复面板）· `LevelBadge`（证据级全称 chip；色彩映射固定：`hardware-in-loop verified`=ok · `ci-simulated`=中性描边（虚线边 + ink 文字，专用 `.badge.ci`，不占用 accent）· `implemented-unverified`=warn · `planned`=mute）· `SimTag`（来源标记 `.simtag`：`sim meter` 等仿真组件在出现处就地标注，虚线边 + ink 文字，与 LevelBadge 同一视觉族）· `Toggle` / `Segmented` · `Toast`。
 
 ## 不变式
 
 1. `accent` 只用于：当前选中、交互入口、进行态；成功/失败/警告一律用 `ok`/`danger`/`warn` 表达，禁止用 accent 表达结果，禁止大面积色块。
-2. 仿真与真机永不混排：simulated 目标永远带 `ci-simulated` 徽标；evidence level 只用支持矩阵的四个全称，不自造缩写。
-3. 不可逆操作必过三道门 + 显式确认；确认键不用主色填充、不是默认焦点；刷写开始后没有「取消」，abort 只能作为安全事件被记录。
+2. 仿真与真机永不混排：simulated 目标永远带 `ci-simulated` 徽标；evidence level 只用支持矩阵的四个全称，不自造缩写。仿真来源在同一次运行的 Bench、门禁条、确认框、运行页四处必须同源标注（例：功率计未配置时，四处一律写 `sim meter`，不得只写「armed 5–1500 mA」）。
+3. 不可逆操作必过三道门 + 显式确认；确认键不用主色填充、不是默认焦点；刷写开始后没有「取消」，abort 只能作为安全事件被记录；运行期间导航锁定（`.item.disabled`），跑到完成或失败才解锁。
 4. 数据（hex/指纹/JSON/时间戳）一律 mono 且可选中复制；字段名与 CLI/MCP JSON 同名；失败态必须同时给出证据入口与恢复动作。
 5. 亮暗成对设计，不存在只有暗态的界面；层级 ≤3 层表面（`bg`/`surface`/`raised`），分隔靠 `line`，不用阴影堆叠表达层级。
 
@@ -62,3 +62,17 @@
 
 差异声明纪律：宿主特例必须先写进本节才能实现；未声明的宿主差异按违约处理
 （案例：taskly 漂移台账 D8）。
+
+
+## 2026-11-15 · 原型交互补齐
+
+入口为 prototype/bench.html。流程为 Bench → Plans → 显式确认 → 模拟运行 → 本地证据。校验失败的计划不能进入执行；取消回到 Plans；导出是原型报告，不能作为真实 ECU 证据。
+
+根级 index.html 只负责首次进入主界面；页面切换直接到目标界面，不再保留页面目录。原型运行脚本 prototype-runtime.js / prototype-flow.js 只表达浏览器内的交互合同；正式产品业务仍由既定引擎实现。真实设备、模型和发布服务均未连接。凭据演示不保存密钥，破坏性示例与派发保留确认和取消。
+
+这些是可评审的增量改动，未替用户勾选满意度、HIG 最终验收或设计冻结条件。
+
+
+## Prototype source checkpoint — 2026-11-15
+
+`index.html` opens the primary prototype directly. Screen-directory launchers have been removed. All local scripts, styles and referenced assets needed by this checkpoint are versioned under this directory; OpenDesign metadata is excluded. This is an editable prototype checkpoint, not a claim that the native product or external services implement these interactions.

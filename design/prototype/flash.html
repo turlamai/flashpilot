@@ -46,15 +46,16 @@
         <div class="brand"><div class="mark">FP</div><div class="name">FlashPilot</div></div>
         <div class="sect">BENCH</div>
         <nav class="nav">
-          <div class="item"><span class="kb">1</span>Bench</div>
-          <div class="item"><span class="kb">2</span>Plans</div>
+          <div class="item disabled" aria-disabled="true"><span class="kb">1</span>Bench</div>
+          <div class="item disabled" aria-disabled="true"><span class="kb">2</span>Plans</div>
           <div class="item active"><span class="kb">3</span>Flash</div>
-          <div class="item"><span class="kb">4</span>Evidence</div>
+          <div class="item disabled" aria-disabled="true"><span class="kb">4</span>Evidence</div>
         </nav>
         <div class="sect">SYSTEM</div>
         <nav class="nav">
-          <div class="item">⚙ Settings</div>
+          <div class="item disabled" aria-disabled="true">⚙ Settings</div>
         </nav>
+        <div class="navlock">Navigation is locked until this run finishes. A run cannot be left mid-flash.</div>
         <div class="foot">
           <span class="dot"></span><span class="st">Engine ready · v0.2.0</span>
           <span class="sp"></span><span class="st mono">f14d1af</span>
@@ -75,7 +76,7 @@
           <div class="gatebar">
             <span class="gatechip"><span style="color:var(--ok)">✓</span> identity <span class="gv">0xFD00 = "ready"</span></span>
             <span class="gatechip"><span style="color:var(--ok)">✓</span> fingerprint <span class="gv">e3400821709d3e50</span></span>
-            <span class="gatechip"><span class="spin" style="width:10px;height:10px"></span> powerGuard <span class="gv">0.62 / 1.50 A</span> <span class="meter"><i></i></span></span>
+            <span class="gatechip"><span class="spin" style="width:10px;height:10px"></span> powerGuard <span class="gv">0.62 / 1.50 A</span> <span class="meter"><i></i></span> <span class="simtag">sim meter</span></span>
             <span class="gatechip"><span style="color:var(--mute)">↺</span> onFail <span class="gv">resetAndRetry</span></span>
           </div>
 
@@ -126,8 +127,7 @@
 
         </div>
         <div class="statusbar">
-          <span><kbd>4</kbd> evidence</span>
-          <span><kbd>e</kbd> export report</span>
+          <span>navigation locked until the run ends</span>
           <span><kbd>?</kbd> all shortcuts</span>
           <span class="sp"></span>
           <span>run cannot be cancelled once erase starts</span>
@@ -142,5 +142,7 @@
       document.getElementById('app').classList.toggle('dark');
     });
   </script>
+<script src="prototype-runtime.js"></script>
+<script src="prototype-flow.js"></script>
 </body>
 </html>

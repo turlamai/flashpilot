@@ -12,10 +12,8 @@
   .target .name { font-size: 19px; font-weight: 700; letter-spacing: .1px; }
   .target .idline { margin-top: 6px; }
   .target .idline .mono { color: var(--mute); }
-  .target .honest {
-    flex: none; width: 250px; font-size: 11px; line-height: 1.5; color: var(--mute);
-    border-left: 2px solid var(--line); padding-left: 10px;
-  }
+  .target .idbadges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .target .prov { font-size: 11.5px; line-height: 1.5; color: var(--mute); margin-top: 6px; }
   .transport { padding: 2px 4px; }
   .tname { font-size: 13.5px; font-weight: 600; }
   .tdetail { font-size: 11.5px; color: var(--mute); margin-top: 2px; }
@@ -26,7 +24,7 @@
   .ic.p { color: var(--ok); } .ic.w { color: var(--warn); } .ic.f { color: var(--danger); }
   .ctext { flex: 1; min-width: 0; }
   .csum { font-size: 13px; }
-  .ccode { font-family: var(--mono); font-size: 10.5px; color: var(--mute); margin-top: 1px; }
+  .ccode { font-family: var(--mono); font-size: 11.5px; color: var(--mute); margin-top: 1px; }
   .dtc { display: flex; align-items: center; gap: 10px; }
 </style>
 </head>
@@ -70,25 +68,28 @@
         <div class="view">
 
           <div class="panel">
-            <div class="panel-h"><span class="tt">Target</span><span class="badge accent">current</span><span class="sp"></span><span class="note">identity gate reads DIDs before every run</span></div>
+            <div class="panel-h"><span class="tt">Target</span><span class="badge accent">current</span></div>
             <div class="target">
               <div class="who">
                 <div class="name">Simulated Bench ECU</div>
                 <div class="idline mono">mode extended-diagnostic · transport sim · <span style="color:var(--ink)">DID 0xFD00 = "ready"</span></div>
-                <div style="margin-top:8px"><span class="badge accent"><span class="level">ci-simulated</span></span></div>
+                <div class="idbadges">
+                  <span class="badge ci"><span class="level">ci-simulated</span></span>
+                  <span class="simtag">sim meter</span>
+                </div>
+                <div class="prov">Evidence levels come from the support matrix; simulated runs never claim production flashing reliability.</div>
               </div>
-              <div class="honest">Simulated evidence never claims production flashing reliability. Evidence levels come from the support matrix and are never abbreviated.</div>
             </div>
           </div>
 
           <div class="panel">
-            <div class="panel-h"><span class="tt">ECU / adapter combination</span><span class="sp"></span><span class="note">level shown, availability claimed separately</span></div>
+            <div class="panel-h"><span class="tt">ECU / adapter combination</span></div>
             <div class="transport">
               <div class="row selected">
                 <span class="tcheck">●</span>
                 <div><div class="tname">Simulated bench ECU</div><div class="tdetail mono">transport sim · hardware-free</div></div>
                 <span class="sp"></span>
-                <span class="badge accent"><span class="level">ci-simulated</span></span>
+                <span class="badge ci"><span class="level">ci-simulated</span></span>
               </div>
               <div class="row">
                 <span class="tcheck" style="color:var(--mute)">○</span>
@@ -131,7 +132,7 @@
             </div>
             <div class="row">
               <span class="ic w">!</span>
-              <div class="ctext"><div class="csum">Power meter provider</div><div class="ccode">warn.meter · command:./meter.sh not configured — using built-in sim meter</div></div>
+              <div class="ctext"><div class="csum">Power meter provider <span class="simtag">sim meter</span></div><div class="ccode">warn.meter · command:./meter.sh not configured — using built-in sim meter</div></div>
               <span class="badge warn">warning</span>
             </div>
           </div>
@@ -164,5 +165,7 @@
       document.getElementById('app').classList.toggle('dark');
     });
   </script>
+<script src="prototype-runtime.js"></script>
+<script src="prototype-flow.js"></script>
 </body>
 </html>

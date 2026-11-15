@@ -86,7 +86,7 @@
             <div class="panel-h"><span class="tt">Pre-flight gates</span><span class="sp"></span><span class="note">all three must pass before this dialog appears</span></div>
             <div class="gate"><span class="gl">Identity gate</span><span class="badge ok">✓ matched</span><span class="gv">DID 0xFD00 = "ready" · read as first step, byte-exact</span></div>
             <div class="gate"><span class="gl">Fingerprint gate</span><span class="badge ok">✓ matched</span><span class="gv">e3400821709d3e50 · pinned before any driver call</span></div>
-            <div class="gate"><span class="gl">Power guard</span><span class="badge accent">armed</span><span class="gv">5–1500 mA · poll 200 ms · out-of-band current aborts permanently</span></div>
+            <div class="gate"><span class="gl">Power guard</span><span class="badge accent">armed</span><span class="simtag">sim meter</span><span class="gv">5–1500 mA · built-in sim meter · poll 200 ms · out-of-band current aborts permanently</span></div>
           </div>
 
           <div class="panel steps">
@@ -114,9 +114,9 @@
           <h2><span class="ic">⚠</span> Erase &amp; flash plan.sim.json?</h2>
           <div class="dsub">Simulated Bench ECU · transport sim · run FP-2026-1111-0901</div>
           <div class="facts">
-            <div class="fact"><span class="fl">Target</span><span class="fv">Simulated Bench ECU · <span class="badge accent"><span class="level">ci-simulated</span></span></span></div>
+            <div class="fact"><span class="fl">Target</span><span class="fv">Simulated Bench ECU · <span class="badge ci"><span class="level">ci-simulated</span></span></span></div>
             <div class="fact"><span class="fl">Segment</span><span class="fv">0x08000000 · 30 B · BIN (fw.bin)</span></div>
-            <div class="fact"><span class="fl">Gates</span><span class="fv">identity matched · fingerprint matched · power guard armed</span></div>
+            <div class="fact"><span class="fl">Gates</span><span class="fv">identity matched · fingerprint matched · power guard armed (sim meter)</span></div>
             <div class="fact"><span class="fl">Recovery</span><span class="fv">onFail resetAndRetry — best-effort reset, one retry</span></div>
           </div>
           <div class="warnstrip">Erasing destroys the current image at 0x08000000. Once erase starts the run cannot be cancelled — an abort is recorded as a safety event. This confirmation is written to the run report.</div>
@@ -136,5 +136,7 @@
       document.getElementById('app').classList.toggle('dark');
     });
   </script>
+<script src="prototype-runtime.js"></script>
+<script src="prototype-flow.js"></script>
 </body>
 </html>
