@@ -1,7 +1,7 @@
 # FlashPilot
 
 **Agent 原生的 ECU 烧录——CAN、DoIP 和 LIN 上的 UDS，由声明式烧录计划驱动，为编码 agent 而生。**
-FlashPilot 提供可自动化的烧录流程：免费 AGPL 引擎（无按次/按席位费用，CI 与 agent 自动化包含在内），官方验证发行版作为规划中的付费层——一个无常驻进程的 CLI、确定性 JSON、永不撒谎的退出码，以及让 agent 自我诊断的失败证据。
+FlashPilot 提供可自动化的烧录流程：AGPL 引擎、无常驻进程的 CLI、确定性 JSON、明确的退出码，以及让 agent 排查失败的证据。当前重点是 ECU 与适配器的真实验证，而非收费版本。
 
 [![CI](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux_%7C_macOS-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
@@ -9,7 +9,7 @@ FlashPilot 提供可自动化的烧录流程：免费 AGPL 引擎（无按次/�
 
 ## 开始使用
 
-AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使用。规划有经验证的官方工程资产；付费版尚未开售。 桌面源码和预览路径面向 macOS、Windows、Linux。发布压缩包不表示所有适配器、ECU 和总线均已合格。
+AGPL 引擎、CLI 和 MCP 遵守既有源码许可。工程预览重点验证真实刷写、失败与恢复，不设收费版。 桌面源码和预览路径面向 macOS、Windows、Linux。发布压缩包不表示所有适配器、ECU 和总线均已合格。
 
 [安装、首次使用、隐私与备份恢复](docs/USER-GUIDE.zh-CN.md) · [English](docs/USER-GUIDE.md)
 
