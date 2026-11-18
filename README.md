@@ -1,5 +1,7 @@
 # FlashPilot
 
+**Product:** [Website](https://flashpilot.jrtx.site/) · **Support:** [Issues & feedback](https://github.com/turlamai/flashpilot/issues) · [Development policy](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.md)
+
 **Agent-native ECU flashing — UDS over CAN, DoIP and LIN, driven by declarative flash plans and built for coding agents.**
 A focused flashing workflow: an AGPL engine for CI and agent automation, a resident-free CLI, deterministic JSON, meaningful exit codes and failure evidence. Development focuses on real ECU/adapter validation, not a paid edition.
 
