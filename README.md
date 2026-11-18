@@ -1,7 +1,7 @@
 # FlashPilot
 
 **Agent-native ECU flashing — UDS over CAN, DoIP and LIN, driven by declarative flash plans and built for coding agents.**
-A focused flashing workflow: a free AGPL engine (no per-flash or per-seat fees, CI and agent automation included) with an official validated distribution planned as the paid tier — one resident-free CLI, deterministic JSON, exit codes that never lie, and failure evidence that lets an agent self-diagnose.
+A focused flashing workflow: an AGPL engine for CI and agent automation, a resident-free CLI, deterministic JSON, meaningful exit codes and failure evidence. Development focuses on real ECU/adapter validation, not a paid edition.
 
 [![CI](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux_%7C_macOS-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
