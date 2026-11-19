@@ -1,7 +1,5 @@
 # FlashPilot
 
-**产品：**[产品主页](https://flashpilot.jrtx.site/) · **支持：**[问题与反馈](https://github.com/turlamai/flashpilot/issues) · [当前交付策略](https://github.com/turlamai/turlamai.github.io/blob/master/PORTFOLIO.zh-CN.md)
-
 **Agent 原生的 ECU 烧录——CAN、DoIP 和 LIN 上的 UDS，由声明式烧录计划驱动，为编码 agent 而生。**
 FlashPilot 提供可自动化的烧录流程：AGPL 引擎、无常驻进程的 CLI、确定性 JSON、明确的退出码，以及让 agent 排查失败的证据。当前重点是 ECU 与适配器的真实验证，而非收费版本。
 
