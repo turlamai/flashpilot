@@ -1,14 +1,16 @@
-# FlashPilot DESIGN.md — 视觉与交互契约（单一真源）
+# FlashPilot DESIGN.md — 视觉与交互契约
 
-原型（`design/prototype/`）与实现（`macos-host/`、`windows/`、`linux/` 三宿主）都遵循本文件；改视觉先改这里，再同步实现。
-桌面宿主现状是系统默认样式（SwiftUI Form / WinUI StackPanel / GTK4 盒子），无自定义 tokens——本契约为**从零设计**：中性色与 accent 推导自产品站品牌 kit `site/family.css`（已含亮暗两态），状态语义色（ok/warn/danger）按 HIG 语义与暖纸底色新推导；无既有实现值可提取，落地时按本表 1:1 采用。
+原型（`design/prototype/`）与实现（`macos-host/`、`windows/`、`linux/` 三宿主）都遵循本文件的语义、决策与边界；**数值不在此复制**。
+
+**真源分工**：颜色、字体栈、字号、圆角、间距、动效时长的具体值以 `design/prototype/shared.css` 为唯一真源（亮暗成对；中性色与 accent 推导自家族 kit `site/family.css`）。改值改 CSS，改语义改本文件。
+桌面宿主现状是系统默认样式（SwiftUI Form / WinUI StackPanel / GTK4 盒子），无自定义 tokens——本契约为**从零设计**：中性色与 accent 推导自产品站品牌 kit（已含亮暗两态），状态语义色（ok/warn/danger）按 HIG 语义与暖纸底色新推导；无既有实现值可提取，落地时按 CSS 真源采用。
 
 ## Brief（2026-11-11 从零设计）
 
-- **目标**：把三宿主共有的功能骨架（Bench / Plans / Flash / Evidence 分区，英文界面）升级为正式的刷写驾驶舱视觉。刷写是不可逆硬件操作，**安全性是视觉语言的一部分**：确认流与三态（进行中 / 成功 / 失败+证据）必须极其明确；硬件在环证据可回溯是付费卖点，界面上任何结论都必须能点回原始 `flashpilot.report/v1`。
+- **目标**：把三宿主共有的功能骨架（Bench / Plans / Flash / Evidence 分区，英文界面）升级为正式的刷写驾驶舱视觉。刷写是不可逆硬件操作，**安全性是视觉语言的一部分**：确认流与三态（进行中 / 成功 / 失败+证据）必须极其明确；硬件在环证据可回溯，界面上任何结论都必须能点回原始 `flashpilot.report/v1`。
 - **原型范围**（6 屏 × 亮/暗）：① Bench 主视图（英雄屏：目标身份 + 传输/适配器组合选择 + readiness + DTC）② Plans 校验（计划清单 + 校验卡 + 指纹门 + 空态 + 失败恢复提示）③ 刷写确认流（不可逆操作确认对话框 + 武装待发态）④ 刷写运行（审计步骤时间线 + powerGuard 实时电流 + 进行态）⑤ Evidence 失败恢复（report 结构 + 恢复动作 + 成功/失败对照）⑥ 设置。
 - **Exit 条件**：6 屏关键状态齐（空态/进行态/确认态/失败恢复态）+ 交互逻辑定稿 + HIG 清单全过 + 用户评审通过。
-- **不在范围**：新功能与协议/契约变更（不动 `rivet-schema.json` 与 CLI JSON 形状）、商业/定价 UI（免费/付费边界以 `PRICING.md` 为唯一权威）、官网与文档站、CLI 终端输出样式。
+- **不在范围**：新功能与协议/契约变更（不动 `rivet-schema.json` 与 CLI JSON 形状）、商业/定价 UI、官网与文档站、CLI 终端输出样式。
 
 ## 设计原则（HIG 内核 + 产品特有）
 
@@ -20,7 +22,7 @@
 
 ## Tokens（语义与推导依据；值不在此复制）
 
-值类 token 真源 = `site/family.css`（家族 kit）+ 本产品状态色推导；原型 `design/prototype/shared.css` 与其一一对应，本表只记语义、来源与推导依据。中性色与 accent 取 kit 现行值（已含亮暗两态）；`--ok/--warn/--danger` 系按 HIG 语义与暖纸底色新推导（依据：与 terracotta accent 可区分 + 双态 WCAG AA）。
+值类 token 真源 = `design/prototype/shared.css`（中性色与 accent 来自 `site/family.css` 家族 kit；状态色为产品推导），本表只记语义、来源与推导依据。`--ok/--warn/--danger` 系按 HIG 语义与暖纸底色新推导（依据：与 terracotta accent 可区分 + 双态 WCAG AA）。
 
 | Token | 语义 | 来源 |
 |---|---|---|
@@ -31,8 +33,8 @@
 | `--warn --warn-soft` | 警告/`implemented-unverified`/lint finding | 新推导（AA 双态） |
 | `--danger --danger-soft` | 失败/破坏性动作/safety abort | 新推导（AA 双态） |
 
-- **字体**：界面 `system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei"`；数据/日志 `ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace`（三宿主现状已用 Consolas/`.monospaced`，提升为契约）。正文 13.5px/1.55（工具密度），面板标题 600，次级 12.5px，辅助 11px，数据一律 mono。
-- **圆角**：窗口 12px · 卡片 10px · 控件 6px。**间距节奏**：4/8/12/16/24。**动效**：120ms ease；spinner 1s linear。
+- **字体角色**：界面用系统 sans 栈；数据/日志一律 mono（三宿主现状已用 Consolas/`.monospaced`，提升为契约）。工具密度的字号层级（正文 / 面板标题 / 次级 / 辅助）由 `shared.css` 的 `--mono` 与字号规则定义。
+- **几何与动效**：窗口/卡片/控件圆角、间距节奏与动效时长均以 `shared.css` 为准。
 - **语言**：界面文案跟随三宿主现状（英文）；本契约与内部评审文档用中文。
 
 ## 组件词汇
@@ -47,7 +49,6 @@
 4. 数据（hex/指纹/JSON/时间戳）一律 mono 且可选中复制；字段名与 CLI/MCP JSON 同名；失败态必须同时给出证据入口与恢复动作。
 5. 亮暗成对设计，不存在只有暗态的界面；层级 ≤3 层表面（`bg`/`surface`/`raised`），分隔靠 `line`，不用阴影堆叠表达层级。
 
-
 ## 平台映射与差异声明（预钉 · 宿主实现时升级为落点表）
 
 统一层（三平台必须一致，`design/prototype/` 原型已锁定）：信息架构、核心流程、快捷键语义、
@@ -57,12 +58,10 @@
 |---|---|---|---|
 | 修饰键 | ⌘ | Ctrl | Ctrl |
 | 命令入口 | 原生菜单栏 | 菜单栏/命令行内 | 菜单栏 |
-| 字体 | 系统栈 + PingFang SC | 系统栈 + Microsoft YaHei | 系统栈 + Noto Sans CJK |
 | 原生控件 | SwiftUI 控件 | WinUI 3 控件 | GTK4 控件 |
 
 差异声明纪律：宿主特例必须先写进本节才能实现；未声明的宿主差异按违约处理
 （案例：taskly 漂移台账 D8）。
-
 
 ## 2026-11-15 · 原型交互补齐
 
@@ -71,7 +70,6 @@
 根级 index.html 只负责首次进入主界面；页面切换直接到目标界面，不再保留页面目录。原型运行脚本 prototype-runtime.js / prototype-flow.js 只表达浏览器内的交互合同；正式产品业务仍由既定引擎实现。真实设备、模型和发布服务均未连接。凭据演示不保存密钥，破坏性示例与派发保留确认和取消。
 
 这些是可评审的增量改动，未替用户勾选满意度、HIG 最终验收或设计冻结条件。
-
 
 ## Prototype source checkpoint — 2026-11-15
 
