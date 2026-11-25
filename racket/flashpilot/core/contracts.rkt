@@ -1,9 +1,7 @@
 #lang racket/base
 
-;; Frozen wire-contract records (ADR 0002): Racket port of
-;; src/Benchpilot.Core/Contracts.cs, DiagnosticsContracts.cs,
-;; src/Benchpilot.Protocol/ApiModels.cs plus the hex serialization from
-;; HexBytes.cs.
+;; Frozen wire-contract records (ADR 0002), preserving the original
+;; C# contract shapes and hexadecimal byte serialization.
 ;;
 ;; JSON parity: the C# host serializes with JsonSerializerDefaults.Web —
 ;; camelCase keys, null fields written explicitly. Internally absent values
