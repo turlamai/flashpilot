@@ -34,7 +34,10 @@
       <div class="lights"><i></i><i></i><i></i></div>
       <div class="t">FlashPilot — Bench</div>
       <div class="sp"></div>
-      <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme">◐</button>
+      <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" title="Switch to dark theme">
+        <svg class="icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z"></path></svg>
+        <svg class="icon sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"></path></svg>
+      </button>
     </div>
     <div class="body">
       <aside class="sidebar">
@@ -155,7 +158,7 @@
           <span><kbd>d</kbd> DTCs</span>
           <span><kbd>?</kbd> all shortcuts</span>
           <span class="sp"></span>
-          <span>Prototype v0.1 · ◐ toggles theme</span>
+          <span>Prototype v0.1 · <svg class="icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z"></path></svg><svg class="icon sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"></path></svg> toggles theme</span>
         </div>
       </section>
     </div>

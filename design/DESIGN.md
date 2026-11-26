@@ -74,3 +74,22 @@
 ## Prototype source checkpoint — 2026-11-15
 
 `index.html` opens the primary prototype directly. Screen-directory launchers have been removed. All local scripts, styles and referenced assets needed by this checkpoint are versioned under this directory; OpenDesign metadata is excluded. This is an editable prototype checkpoint, not a claim that the native product or external services implement these interactions.
+
+## 2026-11-26 · 家族基线对齐（`2026-11-20-minimal-family`）
+
+起始 SHA `5ca6ff2`，范围仅 `design/prototype/`；信息架构、强调色、示例数据、主题存储与切换机制、产品行为均未改动。
+
+| 项 | 结果 | 证据 / 限度 |
+|---|---|---|
+| R1 主题切换 | 通过 | 六页标题栏的 `◐` 字形改为 16px 线性 SVG（深色显月亮、浅色显太阳），静默图标按钮 28px、无静置边框与底色；`aria-label` 与 `title` 随主题同步，状态栏图例同步换图标 |
+| R2 12px 下限 | 通过 | 源码 10–11px 声明 23 → 0；渲染 small 218 → 0；层级保持 辅助 12 / 标签 13 / 正文 14；`kbd`、徽标、键位提示外框随字号微调，多行文本行高 ≥ 1.4 |
+| R3 减弱动效与焦点 | 通过 | `shared.css` 补 `prefers-reduced-motion`；焦点环沿用既有 `button:focus-visible`，图标按钮 offset 2px |
+| R4 原型完整性 | 部分通过 | 无远程依赖、本地引用全通；深色补齐舞台底色与 `color-scheme`（原先只有窗口变暗）；`design/index.html` 保持直达主界面，见下方未决 |
+| R5 可访问名称 | 通过 | 设置页四个开关补 `role="switch"`、行标签名称与状态；nameless 4 → 0 |
+| R6 版式缺陷 | 通过 | plan：文件名不再断行（列表 330 → 348px）、WARNING 与正文不再粘连、详情标题保持单行；flash：直接进入时头部换行，run ID 与状态徽标不再折断；默认尺寸下页面不再多出 20px 空滚动 |
+| R7 契约同步 | 通过 | token 值未改，本节即记录 |
+| R8 仓库门禁 | 通过 | 仓内没有读取 `design/` 的 CI 或脚本；两个脚本 `node --check` 与静态扫描通过 |
+
+同批修正：`prototype-runtime.js` / `prototype-flow.js` 注入的对话框、提示与 title 文案由中文改为英文（语义不变，界面语言以本契约为准）；设置页 Light / Dark 分段随当前主题显示（原先恒为 Light）。
+
+未决（需所有者决定，未改）：浅色主题对比度低于契约所称双态 AA——accent 文字对 accent-soft 2.77:1（主按钮、accent 徽标），`--ok` 4.38:1，`--warn` 3.67:1，涉及色值 token；`design/index.html` 是否恢复为页面总览——#55 记录所有者已确认移除页面目录，与家族 R4 冲突；原型未声明最小窗口宽度，窗口固定 1180px，视口窄于 1228px 时整页横向滚动。
