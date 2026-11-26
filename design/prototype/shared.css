@@ -5,7 +5,7 @@
   --ok: #2E7944; --ok-soft: #E7F1E9;
   --warn: #9C5E18; --warn-soft: #F9EFDD;
   --danger: #C23B2E; --danger-soft: #F9E9E6;
-  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, "JetBrains Mono", monospace;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, "JetBrains Mono", "Noto Sans Mono CJK SC", "Noto Sans CJK SC", "Microsoft YaHei", monospace;
   color-scheme: light;
 }
 .dark {
@@ -20,7 +20,7 @@
 body {
   min-height: 100vh; display: grid; place-items: center; padding: max(24px, calc((100vh - 740px) / 2)) 24px;
   background: radial-gradient(1200px 800px at 20% 0%, #efeae2, #e2dcd1 60%, #d6cfc2);
-  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   -webkit-font-smoothing: antialiased; color: var(--ink);
 }
 /* Dark pair for the stage behind the window; the theme class lives on #app. */
@@ -183,3 +183,11 @@ kbd {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- temperament profile pass ---- */
+/* typography baseline (family standard 2026-11-26-temperament-profiles): CJK/Latin spacing and kinsoku come from the rendering layer,
+   never from typed spaces (§4, §10). Values stay in the token block above. */
+body { text-autospace: normal; line-break: strict; }
+::selection { background: var(--accent-soft); color: var(--ink); }
+/* Paired neutral scrollbar for both themes; thin and non-distracting. */
+html { scrollbar-color: var(--line) transparent; }
