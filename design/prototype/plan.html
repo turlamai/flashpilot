@@ -8,14 +8,17 @@
 <style>
   /* ==== plans screen ==== */
   .cols { display: flex; gap: 12px; align-items: flex-start; }
-  .list { width: 330px; flex: none; }
+  /* Wide enough for the longest plan name beside its badge, so file names never break mid-token. */
+  .list { width: 348px; flex: none; }
   .detail { flex: 1; min-width: 0; }
-  .pname { font-family: var(--mono); font-size: 13px; font-weight: 600; }
-  .pdetail { font-size: 12px; color: var(--mute); margin-top: 2px; }
-  .vsum { font-family: var(--mono); font-size: 12px; color: var(--mute); }
+  .pname { font-family: var(--mono); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .pdetail { font-size: 12px; line-height: 1.4; color: var(--mute); margin-top: 2px; }
+  /* The panel title keeps its line: the summary drops below instead of squeezing it. */
+  .detail .panel-h { flex-wrap: wrap; row-gap: 4px; }
+  .vsum { font-family: var(--mono); font-size: 12px; color: var(--mute); white-space: nowrap; margin-left: auto; }
   .find { display: flex; gap: 8px; padding: 7px 10px; border-radius: 6px; align-items: flex-start; }
   .find.warn { background: var(--warn-soft); }
-  .find .sev { font-size: 11px; font-weight: 700; letter-spacing: .5px; width: 52px; flex: none; padding-top: 1px; }
+  .find .sev { font-size: 12px; font-weight: 700; letter-spacing: .5px; width: 64px; flex: none; padding-top: 1px; }
   .find.warn .sev { color: var(--warn); }
   .find .msg { font-size: 12px; line-height: 1.45; flex: 1; }
   .segrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
@@ -23,7 +26,7 @@
   .fp { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .empty {
     border: 1px dashed var(--line); border-radius: 10px; padding: 18px 16px; text-align: center;
-    color: var(--mute); font-size: 13px; margin-bottom: 12px;
+    color: var(--mute); font-size: 13px; line-height: 1.45; margin-bottom: 12px;
   }
   .sample-h {
     font-size: 12px; font-weight: 700; letter-spacing: .4px; color: var(--mute);
@@ -39,7 +42,10 @@
       <div class="lights"><i></i><i></i><i></i></div>
       <div class="t">FlashPilot — Plans</div>
       <div class="sp"></div>
-      <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme">◐</button>
+      <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" title="Switch to dark theme">
+        <svg class="icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z"></path></svg>
+        <svg class="icon sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"></path></svg>
+      </button>
     </div>
     <div class="body">
       <aside class="sidebar">
@@ -111,10 +117,10 @@
                   <span class="sev">WARNING</span>
                   <span class="msg">securityLevel 1 uses built-in keyDeriver <span class="mono">xor0x5a</span> — fine for the bench, not for a real ECU.</span>
                 </div>
-                <div style="font-size:11px;color:var(--mute);margin:12px 0 4px">0 errors · 1 warning</div>
-                <div style="font-size:11px;color:var(--mute);margin:10px 0 2px">Segment layout</div>
+                <div style="font-size:12px;color:var(--mute);margin:12px 0 4px">0 errors · 1 warning</div>
+                <div style="font-size:12px;color:var(--mute);margin:10px 0 2px">Segment layout</div>
                 <div class="segrow mono">0x08000000 <span class="sp"></span> 30 B <span class="sp"></span> BIN (fw.bin)</div>
-                <div style="font-size:11px;color:var(--mute);margin:12px 0 6px">Fingerprint gate</div>
+                <div style="font-size:12px;color:var(--mute);margin:12px 0 6px">Fingerprint gate</div>
                 <div class="fp">
                   <span class="mono">144252e810505c9f</span>
                   <span class="mono mute">expected e3400821709d3e50</span>
@@ -150,7 +156,7 @@
           <span><kbd>f</kbd> flash (needs confirm)</span>
           <span><kbd>?</kbd> all shortcuts</span>
           <span class="sp"></span>
-          <span>Prototype v0.1 · ◐ toggles theme</span>
+          <span>Prototype v0.1 · <svg class="icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z"></path></svg><svg class="icon sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"></path></svg> toggles theme</span>
         </div>
       </section>
     </div>
