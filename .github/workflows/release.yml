@@ -178,7 +178,7 @@ jobs:
           distribution: full
           variant: CS
       - name: Install rivet for the update signer
-        run: raco pkg install --auto --no-docs rivet
+        run: raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#v0.17.0'
       - name: Sign the CLI update manifest (release asset)
         env:
           UPDATE_ED25519_PRIVATE_KEY_B64: ${{ secrets.UPDATE_ED25519_PRIVATE_KEY_B64 }}
