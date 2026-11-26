@@ -11,7 +11,9 @@
   .gate:last-child { border-bottom: none; }
   .gate .gl { width: 110px; flex: none; font-size: 12px; font-weight: 600; }
   .gate .gv { font-family: var(--mono); font-size: 12px; color: var(--mute); flex: 1; }
-  .steps { opacity: .45; }
+  /* Not-yet-run steps read as secondary through the secondary ink, not through opacity: text keeps >= 4.5:1. */
+  .steps .tt { color: var(--mute); }
+  .steps .sic { font-weight: 400; }
   .step { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
   .step:last-child { border-bottom: none; }
   .step .sic { width: 16px; flex: none; text-align: center; color: var(--mute); font-size: 12px; }

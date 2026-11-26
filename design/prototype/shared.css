@@ -1,16 +1,16 @@
 /* ==== FlashPilot 原型共享壳层 — tokens 与组件，见 design/DESIGN.md ==== */
 :root {
   --bg: #FAF8F5; --surface: #FFFFFF; --raised: #F3EFE9; --line: #E6E1D8;
-  --ink: #201B16; --mute: #6F675E; --accent: #D97757; --accent-soft: #FAEFEB;
-  --ok: #2F7D46; --ok-soft: #E7F1E9;
-  --warn: #B26B1B; --warn-soft: #F9EFDD;
+  --ink: #201B16; --mute: #6F675E; --accent: #B34B29; --accent-contrast: #FFFFFF; --accent-soft: #FAEFEB;
+  --ok: #2E7944; --ok-soft: #E7F1E9;
+  --warn: #9C5E18; --warn-soft: #F9EFDD;
   --danger: #C23B2E; --danger-soft: #F9E9E6;
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, "JetBrains Mono", monospace;
   color-scheme: light;
 }
 .dark {
   --bg: #16120F; --surface: #1F1A16; --raised: #262019; --line: #332C25;
-  --ink: #F1ECE5; --mute: #A89F93; --accent: #E08A6B; --accent-soft: #32231C;
+  --ink: #F1ECE5; --mute: #A89F93; --accent: #E08A6B; --accent-contrast: #1D120C; --accent-soft: #32231C;
   --ok: #63C58B; --ok-soft: #1E3028;
   --warn: #E5A54B; --warn-soft: #332A19;
   --danger: #F2776B; --danger-soft: #362019;
@@ -62,9 +62,8 @@ body:has(#app.dark) { background: radial-gradient(1200px 800px at 20% 0%, #100d0
 .brand { display: flex; align-items: center; gap: 9px; padding: 4px 8px 14px; }
 .brand .mark {
   width: 22px; height: 22px; border-radius: 6px; background: var(--accent);
-  display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700;
+  display: grid; place-items: center; color: var(--accent-contrast); font-size: 12px; font-weight: 700;
 }
-.dark .brand .mark { color: #1D120C; }
 .brand .name { font-size: 14px; font-weight: 700; letter-spacing: .1px; }
 .sect { font-size: 12px; font-weight: 600; letter-spacing: .8px; color: var(--mute); padding: 12px 8px 6px; }
 .nav { display: flex; flex-direction: column; gap: 2px; }

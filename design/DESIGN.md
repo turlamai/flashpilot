@@ -92,4 +92,23 @@
 
 同批修正：`prototype-runtime.js` / `prototype-flow.js` 注入的对话框、提示与 title 文案由中文改为英文（语义不变，界面语言以本契约为准）；设置页 Light / Dark 分段随当前主题显示（原先恒为 Light）。
 
-未决（需所有者决定，未改）：浅色主题对比度低于契约所称双态 AA——accent 文字对 accent-soft 2.77:1（主按钮、accent 徽标），`--ok` 4.38:1，`--warn` 3.67:1，涉及色值 token；`design/index.html` 是否恢复为页面总览——#55 记录所有者已确认移除页面目录，与家族 R4 冲突；原型未声明最小窗口宽度，窗口固定 1180px，视口窄于 1228px 时整页横向滚动。
+未决（需所有者决定，未改）：~~浅色主题对比度低于契约所称双态 AA——accent 文字对 accent-soft 2.77:1（主按钮、accent 徽标），`--ok` 4.38:1，`--warn` 3.67:1，涉及色值 token~~（已落地，见下节）；`design/index.html` 是否恢复为页面总览——#55 记录所有者已确认移除页面目录，与家族 R4 冲突；原型未声明最小窗口宽度，窗口固定 1180px，视口窄于 1228px 时整页横向滚动。
+
+## 2026-11-26 · 对比度落地（`2026-11-20-minimal-family`）
+
+起始 SHA `382f144`，范围仅 `design/prototype/`。所有者授权按「保色相、普通文字不低于 4.5:1」处理上节未决的 token；信息架构、示例数据与产品行为不变。
+
+| token | 亮色 | 暗色 | 取值依据 |
+|---|---|---|---|
+| `--accent` | `#D97757` → `#B34B29` | `#E08A6B`（不变） | 主按钮与 accent 徽标是「accent 字压 accent-soft」的软样式，落点取 `--accent-soft`（原 2.77） |
+| `--accent-contrast`（新增） | `#FFFFFF` | `#1D120C` | accent 之上的文字。原先品牌标在亮色写死 `#fff`、暗色另有一条 `.dark` 覆盖，现收为一个 token |
+| `--ok` | `#2F7D46` → `#2E7944` | `#63C58B`（不变） | `--ok-soft` 上的 passed / verified 徽标（原 4.38） |
+| `--warn` | `#B26B1B` → `#9C5E18` | `#E5A54B`（不变） | `--warn-soft` 上的 warning / unverified 徽标（原 3.67） |
+
+**未激活态不再用 opacity 表达**。原先四处用整块透明度压暗「尚未运行」的内容：`confirm.html` 的 `.steps`（.45）、`evidence.html` 的 `.srow.na`（.5）、`flash.html` 的 `.step.pending`（.5）、`bench.html` 的 `.row.dim`（.55）。这些文字是状态本身（`not run` / `pending` / `planned`），压暗后读数只有 1.9–3.9。改为去掉透明度，步骤名与图标用 `--mute`、字重降一档；状态仍由文字与 `○` / `—` 标记给出，不只靠颜色。真正禁用的控件（`.btn:disabled` .45、`.item.disabled` .38）保持不变。
+
+验证：无头 Edge 1280×800，6 页 × 亮/暗，脚本测量：低于 4.5:1 的文字对 68 / 24 → 0 / 0；sub-12px 0；横向溢出 0；无可访问名称的控件 0；脚本错误 0。截图核对 evidence 亮色与 bench 暗色：未运行行与已完成行仍可区分。未覆盖：模态框遮罩后的内容按未加遮罩计算、非文字对比（图标、控件边界 3:1）。
+
+产品侧同步（漂移，未改）：本原型的 token 是产品样式的先行稿，宿主落地时取 `shared.css` 现值并补 `--accent-contrast`。
+
+仍记为待办、未改：`design/index.html` 直达主界面（见 #55，与家族 R4 的冲突待所有者裁定）；原型固定 1180px 窗口、未声明最小宽度；`.brand .name` 与 `dialog h2` 等处字重 700（家族 400 / 500 / 600）。
