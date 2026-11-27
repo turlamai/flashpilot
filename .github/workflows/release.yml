@@ -7,9 +7,14 @@ name: release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -19,12 +24,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Version must be single-sourced (tag = rktd = info.rkt)
+      - name: Validate release tag and signing trust root
+        env:
+          UPDATE_ED25519_PRIVATE_KEY_B64: ${{ secrets.UPDATE_ED25519_PRIVATE_KEY_B64 }}
+          UPDATE_ED25519_PUBLIC_KEY_B64: ${{ vars.UPDATE_ED25519_PUBLIC_KEY_B64 }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          grep -q "^## \[${VERSION}\]" CHANGELOG.md
-          grep -q "(version . \"${VERSION}\")" rivet.rktd
-          grep -q "(define version \"${VERSION}\")" racket/info.rkt
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/tags/v* ]] || { echo "::error::Release requires a version tag"; exit 1; }
+          bash scripts/check-release-version.sh "$GITHUB_REF_NAME"
+          bash scripts/check-release-signing-key.sh
 
   build:
     name: Build (${{ matrix.platform }}-${{ matrix.arch }})
@@ -182,6 +190,7 @@ jobs:
       - name: Sign the CLI update manifest (release asset)
         env:
           UPDATE_ED25519_PRIVATE_KEY_B64: ${{ secrets.UPDATE_ED25519_PRIVATE_KEY_B64 }}
+          UPDATE_ED25519_PUBLIC_KEY_B64: ${{ vars.UPDATE_ED25519_PUBLIC_KEY_B64 }}
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
@@ -195,12 +204,10 @@ jobs:
           KEY_DER="$RUNNER_TEMP/update-ed25519-private.der"
           trap 'rm -f "$KEY_DER"' EXIT
           printf '%s' "$UPDATE_ED25519_PRIVATE_KEY_B64" | base64 -d > "$KEY_DER"
-          # The signer's round-trip verification needs the counterpart
-          # public key. The client trust root is not shipped yet, so
-          # derive the public half of the same release key — never a key
-          # advertised by anything remote.
+          # Use the independently configured release trust root.
+          bash scripts/check-release-signing-key.sh
           PUB_DER="$RUNNER_TEMP/update-trust-root.der"
-          openssl pkey -inform DER -in "$KEY_DER" -pubout -outform DER -out "$PUB_DER"
+          printf "%s" "$UPDATE_ED25519_PUBLIC_KEY_B64" | base64 -d > "$PUB_DER"
           racket scripts/sign-cli-update-manifest.rkt \
             --version "$VERSION" \
             --build "$BUILD" \
