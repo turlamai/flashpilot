@@ -41,7 +41,7 @@ jobs:
       - name: Install package
         run: raco pkg install --auto --name flashpilot --link racket
       - name: Install Rivet (pinned to the acceptance engine version)
-        run: raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#v0.17.0'
+        run: raco pkg install --auto --no-docs 'https://github.com/turlamai/rivet.git#0db8b76396f70dde6d0a9c7935a0bd91d8c066f3'
       - name: Compile Rivet backend
         run: raco make app/backend.rkt
       - name: Compile CLI
